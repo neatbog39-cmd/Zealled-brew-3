@@ -1,0 +1,914 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
+ */
+package pkgfinal.zealled.brew;
+import javax.swing.JOptionPane;
+import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import com.toedter.calendar.JDateChooser;
+/**
+ *
+ * @author ASUS
+ */
+public class History extends javax.swing.JFrame {
+    private javax.swing.table.DefaultTableModel historyModel;
+    /**
+     * Creates new form DashBoard
+     */
+    
+    // ========================= CONSTRUCTOR & FIELDS =========================
+    public History() {
+        initComponents();
+        setupHistoryTable();
+        loadOrders();
+    }
+    
+    // ========================= TABLE SETUP =========================
+    private void setupHistoryTable(){
+        String[] columns = {
+            "OrderID", "Date", "Type", "Products", "Vatable", "VAT(12%)", "Total", "Cash", "Change", "Cashier"
+        };
+
+        historyModel = new javax.swing.table.DefaultTableModel(columns,0){
+            @Override
+            public boolean isCellEditable(int row, int column){
+                return false;
+            }
+        };
+
+        jTableHistory.setModel(historyModel);
+        
+        javax.swing.table.DefaultTableCellRenderer rightRenderer = 
+            new javax.swing.table.DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        
+        for (int i = 4; i <= 8; i++) {
+            jTableHistory.getColumnModel().getColumn(i).setCellRenderer(rightRenderer);
+        }
+        
+        jTableHistory.getColumnModel().getColumn(0).setPreferredWidth(60);   // OrderID
+        jTableHistory.getColumnModel().getColumn(1).setPreferredWidth(120);  // Date
+        jTableHistory.getColumnModel().getColumn(2).setPreferredWidth(80);   // Type
+        jTableHistory.getColumnModel().getColumn(3).setPreferredWidth(200);  // Products
+        jTableHistory.getColumnModel().getColumn(7).setPreferredWidth(90);   // Cash
+        jTableHistory.getColumnModel().getColumn(8).setPreferredWidth(90);   // Change
+        jTableHistory.getColumnModel().getColumn(9).setPreferredWidth(120);  // Cashier
+    }
+    
+    // Add this method after setupHistoryTable()
+    private void addDailyTotalsRow(Date selectedDate) {
+    if (historyModel.getRowCount() == 0) return;
+    
+    // Calculate totals from table data
+    double totalVatable = 0, totalVAT = 0, totalAmount = 0, totalCash = 0, totalChange = 0;
+    
+    for (int i = 0; i < historyModel.getRowCount(); i++) {
+        totalVatable += parseAmount(historyModel.getValueAt(i, 4).toString());
+        totalVAT += parseAmount(historyModel.getValueAt(i, 5).toString());
+        totalAmount += parseAmount(historyModel.getValueAt(i, 6).toString());
+        totalCash += parseAmount(historyModel.getValueAt(i, 7).toString());
+        totalChange += parseAmount(historyModel.getValueAt(i, 8).toString());
+    }
+    
+    // Create bold total row with special marker
+    Object[] totalRow = {
+        "🔢TOTAL", "", "", "",  // Use special prefix to identify
+        String.format("₱%.2f", totalVatable),
+        String.format("₱%.2f", totalVAT),
+        String.format("₱%.2f", totalAmount),
+        String.format("₱%.2f", totalCash),
+        String.format("₱%.2f", totalChange),
+        String.format("** %d Orders **", historyModel.getRowCount())
+    };
+    
+    historyModel.addRow(totalRow);
+}
+
+    // Helper to parse amount from formatted string
+    private double parseAmount(String amountStr) {
+    try {
+        return Double.parseDouble(amountStr.replaceAll("[₱,]", ""));
+    } catch (Exception e) {
+        return 0;
+    }
+}
+    
+    
+
+    // ========================= LOAD ORDERS =========================
+    private void loadOrders() {
+    String searchTerm = txtSearch.getText().trim().toLowerCase();
+    Date selectedDate = dateChooser.getDate();
+    
+    historyModel.setRowCount(0); // Clear table first
+    
+    if (!searchTerm.isEmpty() || selectedDate != null) {
+        filteredSearch(searchTerm, selectedDate);
+    } else {
+        loadAllOrders();
+    }
+}
+
+    // ========================= FILTERED SEARCH =========================
+    private void filteredSearch(String searchTerm, Date selectedDate) {
+        historyModel.setRowCount(0);
+
+        StringBuilder sql = new StringBuilder("""
+            SELECT DISTINCT o.OrderID, o.OrderDate, o.OrderType, 
+                   GROUP_CONCAT(p.Name SEPARATOR ', ') AS Products,
+                   SUM(od.Subtotal) AS OrderSubtotal,
+                   o.TotalAmount, o.`Cash`, o.`Change`
+            FROM orders o 
+            JOIN order_details od ON o.OrderID = od.OrderID 
+            JOIN products p ON od.ProductID = p.ProductID 
+            LEFT JOIN users u ON o.UserID = u.id
+            WHERE 1=1
+            """);
+
+        try (Connection con = ConnectorXampp.connect()) {
+            
+            // Date filter
+            if (selectedDate != null) {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                String dateStr = dateFormat.format(selectedDate);
+                sql.append(" AND DATE(o.OrderDate) = ?");
+            }
+            
+            // Search term filter
+            if (!searchTerm.isEmpty()) {
+                sql.append(" AND (o.OrderID LIKE ? ");
+                sql.append("OR o.OrderDate LIKE ? ");
+                sql.append("OR o.OrderType LIKE ? ");
+                sql.append("OR p.Name LIKE ? ");
+                sql.append("OR u.full_name LIKE ?)");
+            }
+            
+            sql.append(" GROUP BY o.OrderID ORDER BY o.OrderID DESC LIMIT 100");
+
+            try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+                int paramIndex = 1;
+                
+                // Set date parameter first
+                if (selectedDate != null) {
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                    ps.setString(paramIndex++, dateFormat.format(selectedDate));
+                }
+                
+                // Set search parameters
+                if (!searchTerm.isEmpty()) {
+                    String searchPattern = "%" + searchTerm + "%";
+                    for (int i = 0; i < 5; i++) {
+                        ps.setString(paramIndex++, searchPattern);
+                    }
+                }
+                
+                ResultSet rs = ps.executeQuery();
+
+                while (rs.next()) {
+                    double subtotal = rs.getDouble("OrderSubtotal");
+                    double vatable = subtotal / 1.12;
+                    double vat = vatable * 0.12;
+                    double total = rs.getDouble("TotalAmount");
+                    double cash = rs.getDouble("Cash");
+                    double change = rs.getDouble("Change");
+                    
+                    String cashierName = getCashierNameForOrder(rs.getInt("OrderID"));
+                    
+                    historyModel.addRow(new Object[]{
+                        rs.getInt("OrderID"),
+                        rs.getString("OrderDate").substring(0, 16),
+                        rs.getString("OrderType"),
+                        rs.getString("Products"),
+                        String.format("₱%.2f", vatable),
+                        String.format("₱%.2f", vat),
+                        String.format("₱%.2f", total),
+                        String.format("₱%.2f", cash),
+                        String.format("₱%.2f", change),
+                        cashierName
+                    });
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "❌ Filter Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        addDailyTotalsRow(selectedDate);
+    }
+    
+    // ========================= LOAD ALL ORDERS =========================
+    private void loadAllOrders() {
+        historyModel.setRowCount(0);
+
+        String sql = """
+            SELECT o.OrderID, o.OrderDate, o.OrderType, 
+                   GROUP_CONCAT(p.Name SEPARATOR ', ') AS Products,
+                   SUM(od.Subtotal) AS OrderSubtotal,
+                   o.TotalAmount, o.`Cash`, o.`Change`
+            FROM orders o 
+            JOIN order_details od ON o.OrderID = od.OrderID 
+            JOIN products p ON od.ProductID = p.ProductID 
+            GROUP BY o.OrderID 
+            ORDER BY o.OrderID DESC
+            LIMIT 100
+            """;
+
+        try (Connection con = ConnectorXampp.connect();
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                double subtotal = rs.getDouble("OrderSubtotal");
+                double vatable = subtotal / 1.12;
+                double vat = vatable * 0.12;
+                double total = rs.getDouble("TotalAmount");
+                double cash = rs.getDouble("Cash");
+                double change = rs.getDouble("Change");
+                
+                String cashierName = getCashierNameForOrder(rs.getInt("OrderID"));
+                
+                historyModel.addRow(new Object[]{
+                    rs.getInt("OrderID"),
+                    rs.getString("OrderDate").substring(0, 16),
+                    rs.getString("OrderType"),
+                    rs.getString("Products"),
+                    String.format("₱%.2f", vatable),
+                    String.format("₱%.2f", vat),
+                    String.format("₱%.2f", total),
+                    String.format("₱%.2f", cash),
+                    String.format("₱%.2f", change),
+                    cashierName
+                });
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "❌ Database Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+        addDailyTotalsRow(null);
+    }
+
+    // ========================= RECEIPT DETAILS =========================
+    private void showOrderDetails(int orderId){
+    StringBuilder receipt = new StringBuilder();
+
+    try(Connection con = ConnectorXampp.connect()){
+        
+        // HEADER
+        String headerSql = """
+            SELECT o.OrderDate, o.OrderType, o.TotalAmount, o.Cash, o.`Change`,
+                   u.full_name AS CashierName 
+            FROM orders o 
+            LEFT JOIN users u ON o.UserID = u.id 
+            WHERE o.OrderID = ?
+            """;
+        
+        try(PreparedStatement headerPs = con.prepareStatement(headerSql)){
+            headerPs.setInt(1, orderId);
+            ResultSet headerRs = headerPs.executeQuery();
+            
+            if (headerRs.next()) {
+                String orderDateTime = new java.text.SimpleDateFormat("MMM dd, yyyy hh:mm a")
+                    .format(headerRs.getTimestamp("OrderDate"));
+                String orderType = headerRs.getString("OrderType");
+                String cashierName = headerRs.getString("CashierName");
+                
+                receipt.append("☕ ZEALLED BREWS ☕\n")
+                       .append("============================\n")
+                       .append("Cashier: ").append(cashierName != null ? cashierName : "Cashier").append("\n")
+                       .append("Date: ").append(orderDateTime).append("\n")
+                       .append("Type: ").append(orderType).append("\n\n");
+            }
+        }
+
+        // ITEMS
+        String itemsSql = """
+            SELECT p.Name, p.Size, od.AddonName, od.Quantity, od.Subtotal, 
+                   od.BasePrice, od.AddonPrice 
+            FROM order_details od 
+            JOIN products p ON od.ProductID = p.ProductID 
+            WHERE od.OrderID = ? ORDER BY od.Subtotal DESC
+            """;
+        
+        double subtotal = 0;
+        int totalItems = 0;
+        
+        try(PreparedStatement itemsPs = con.prepareStatement(itemsSql)){
+            itemsPs.setInt(1, orderId);
+            ResultSet itemsRs = itemsPs.executeQuery();
+            
+            while(itemsRs.next()){
+                String name = itemsRs.getString("Name");
+                String size = itemsRs.getString("Size");
+                String addon = itemsRs.getString("AddonName");
+                int qty = itemsRs.getInt("Quantity");
+                double itemSubtotal = itemsRs.getDouble("Subtotal");
+                
+                subtotal += itemSubtotal;
+                totalItems += qty;
+                
+                String displayName = name + " (" + size + ")" + 
+                    (addon.equals("None") ? "" : " +" + addon);
+                String itemLine = String.format("%-25s x%-2d ₱%.2f", displayName, qty, itemSubtotal);
+                receipt.append(itemLine).append("\n");
+            }
+        }
+
+        // VAT
+        double vatable = subtotal / 1.12;
+        double vat = vatable * 0.12;
+        double total = vatable + vat;
+        
+        
+        String paymentSql = "SELECT `Cash`, `Change` FROM orders WHERE OrderID = ?";
+        double cashAmount = 0, changeAmount = 0;
+        
+        try(PreparedStatement paymentPs = con.prepareStatement(paymentSql)){
+            paymentPs.setInt(1, orderId);
+            ResultSet paymentRs = paymentPs.executeQuery();
+            if(paymentRs.next()){
+                cashAmount = paymentRs.getDouble("Cash");
+                changeAmount = paymentRs.getDouble("Change");
+            }
+        }
+
+
+        receipt.append("\n----------------------------\n")
+               .append("Total Items: ").append(totalItems).append("\n")
+               .append("Vatable:    ₱").append(String.format("%.2f", vatable)).append("\n")
+               .append("VAT(12%):   ₱").append(String.format("%.2f", vat)).append("\n")
+               .append("TOTAL:      ₱").append(String.format("%.2f", total)).append("\n")
+               .append("💵 Cash:     ₱").append(String.format("%.2f", cashAmount)).append("\n")
+               .append("🔄 Change:   ₱").append(String.format("%.2f", changeAmount)).append("\n")
+               .append("============================\n")
+               .append("✅ PAID! THANK YOU! ☕");
+
+   
+        javax.swing.JTextArea textArea = new javax.swing.JTextArea(receipt.toString());
+        textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 14));
+        textArea.setEditable(false);
+        textArea.setMargin(new java.awt.Insets(10, 10, 10, 10));
+        
+        JOptionPane.showMessageDialog(
+            this, 
+            new javax.swing.JScrollPane(textArea),
+            "📄 Receipt #"+orderId, 
+            JOptionPane.INFORMATION_MESSAGE
+        );
+
+    }catch(Exception e){
+        JOptionPane.showMessageDialog(this, "❌ Error loading receipt: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+    
+    // ========================= HELPER METHODS =========================
+    private String getCashierNameForOrder(int orderId) {
+    String sql = """
+        SELECT u.full_name 
+        FROM orders o 
+        JOIN users u ON o.UserID = u.id 
+        WHERE o.OrderID = ? AND u.role = 'Cashier'
+        """;
+    
+    try (Connection con = ConnectorXampp.connect();
+         PreparedStatement ps = con.prepareStatement(sql)) {
+        
+        ps.setInt(1, orderId);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            String fullName = rs.getString("full_name");
+            return fullName != null ? fullName : "Cashier";
+        }
+    } catch (Exception e) {
+        System.out.println("Cashier lookup failed for Order #" + orderId + ": " + e.getMessage());
+    }
+    return "Cashier";
+}
+    
+   
+  
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jPanel1 = new javax.swing.JPanel();
+        jPanel3 = new javax.swing.JPanel();
+        btnDashBoard = new javax.swing.JButton();
+        btnProducts = new javax.swing.JButton();
+        btnCategory = new javax.swing.JButton();
+        btnAddons = new javax.swing.JButton();
+        btnHistory = new javax.swing.JButton();
+        btnLogOut = new javax.swing.JButton();
+        btnUtilities = new javax.swing.JButton();
+        lblWelcome = new javax.swing.JLabel();
+        btnSize = new javax.swing.JButton();
+        jLabel8 = new javax.swing.JLabel();
+        btnSettings = new javax.swing.JButton();
+        btnInventory = new javax.swing.JButton();
+        jPanel2 = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        txtSearch = new javax.swing.JTextField();
+        btnLoad = new javax.swing.JButton();
+        btnViewDetails = new javax.swing.JButton();
+        jLabel2 = new javax.swing.JLabel();
+        dateChooser = new com.toedter.calendar.JDateChooser();
+        btnClearFilters = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTableHistory = new javax.swing.JTable();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jPanel1.setBackground(new java.awt.Color(0, 0, 0));
+
+        jPanel3.setBackground(new java.awt.Color(40, 40, 40));
+
+        btnDashBoard.setBackground(new java.awt.Color(40, 40, 40));
+        btnDashBoard.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnDashBoard.setForeground(new java.awt.Color(197, 160, 114));
+        btnDashBoard.setText("Dashboard");
+        btnDashBoard.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDashBoardActionPerformed(evt);
+            }
+        });
+
+        btnProducts.setBackground(new java.awt.Color(40, 40, 40));
+        btnProducts.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnProducts.setForeground(new java.awt.Color(197, 160, 114));
+        btnProducts.setText("Products");
+        btnProducts.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnProductsActionPerformed(evt);
+            }
+        });
+
+        btnCategory.setBackground(new java.awt.Color(40, 40, 40));
+        btnCategory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnCategory.setForeground(new java.awt.Color(197, 160, 114));
+        btnCategory.setText("Category");
+        btnCategory.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCategoryActionPerformed(evt);
+            }
+        });
+
+        btnAddons.setBackground(new java.awt.Color(40, 40, 40));
+        btnAddons.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnAddons.setForeground(new java.awt.Color(197, 160, 114));
+        btnAddons.setText("Addons");
+        btnAddons.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddonsActionPerformed(evt);
+            }
+        });
+
+        btnHistory.setBackground(new java.awt.Color(40, 40, 40));
+        btnHistory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnHistory.setForeground(new java.awt.Color(197, 160, 114));
+        btnHistory.setText("History");
+        btnHistory.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnHistoryActionPerformed(evt);
+            }
+        });
+
+        btnLogOut.setBackground(new java.awt.Color(40, 40, 40));
+        btnLogOut.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnLogOut.setForeground(new java.awt.Color(197, 160, 114));
+        btnLogOut.setText("Log Out");
+        btnLogOut.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLogOutActionPerformed(evt);
+            }
+        });
+
+        btnUtilities.setBackground(new java.awt.Color(40, 40, 40));
+        btnUtilities.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnUtilities.setForeground(new java.awt.Color(197, 160, 114));
+        btnUtilities.setText("Utilities");
+        btnUtilities.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUtilitiesActionPerformed(evt);
+            }
+        });
+
+        btnSize.setBackground(new java.awt.Color(40, 40, 40));
+        btnSize.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnSize.setForeground(new java.awt.Color(197, 160, 114));
+        btnSize.setText("Size");
+        btnSize.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSizeActionPerformed(evt);
+            }
+        });
+
+        jLabel8.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/admin1.1.png"))); // NOI18N
+
+        btnSettings.setText("Settings");
+
+        btnInventory.setText("Inventory");
+        btnInventory.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnInventoryActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                        .addComponent(lblWelcome, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addContainerGap())
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(btnSize, javax.swing.GroupLayout.PREFERRED_SIZE, 119, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                        .addComponent(btnLogOut, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(btnHistory, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(btnAddons, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(btnCategory, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(btnProducts, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(btnDashBoard, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(btnUtilities, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                .addGap(17, 17, 17))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addComponent(btnInventory)
+                                    .addComponent(btnSettings))
+                                .addGap(41, 41, 41))))))
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addGap(18, 18, 18)
+                        .addComponent(lblWelcome, javax.swing.GroupLayout.DEFAULT_SIZE, 117, Short.MAX_VALUE)
+                        .addGap(83, 83, 83))
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addGap(28, 28, 28)
+                        .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addComponent(btnDashBoard)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnProducts)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnCategory)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnAddons)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnSize)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnHistory)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnUtilities)
+                .addGap(18, 18, 18)
+                .addComponent(btnSettings)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnInventory)
+                .addGap(152, 152, 152)
+                .addComponent(btnLogOut)
+                .addGap(57, 57, 57))
+        );
+
+        jPanel2.setBackground(new java.awt.Color(40, 40, 40));
+        jPanel2.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+
+        jLabel1.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        jLabel1.setForeground(new java.awt.Color(197, 160, 114));
+        jLabel1.setText("Search:");
+
+        txtSearch.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                txtSearchKeyReleased(evt);
+            }
+        });
+
+        btnLoad.setBackground(new java.awt.Color(40, 40, 40));
+        btnLoad.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnLoad.setForeground(new java.awt.Color(197, 160, 114));
+        btnLoad.setText("Load");
+        btnLoad.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLoadActionPerformed(evt);
+            }
+        });
+
+        btnViewDetails.setBackground(new java.awt.Color(40, 40, 40));
+        btnViewDetails.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnViewDetails.setForeground(new java.awt.Color(197, 160, 114));
+        btnViewDetails.setText("View Details");
+        btnViewDetails.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnViewDetailsActionPerformed(evt);
+            }
+        });
+
+        jLabel2.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        jLabel2.setForeground(new java.awt.Color(197, 160, 114));
+        jLabel2.setText("HISTORY");
+
+        dateChooser.setBackground(new java.awt.Color(40, 40, 40));
+        dateChooser.setForeground(new java.awt.Color(197, 160, 114));
+        dateChooser.addPropertyChangeListener(new java.beans.PropertyChangeListener() {
+            public void propertyChange(java.beans.PropertyChangeEvent evt) {
+                dateChooserPropertyChange(evt);
+            }
+        });
+
+        btnClearFilters.setBackground(new java.awt.Color(40, 40, 40));
+        btnClearFilters.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnClearFilters.setForeground(new java.awt.Color(197, 160, 114));
+        btnClearFilters.setText("Clear");
+        btnClearFilters.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnClearFiltersActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 107, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 334, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnLoad))
+                    .addComponent(btnClearFilters, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(dateChooser, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnViewDetails))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnLoad)
+                    .addComponent(btnViewDetails))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(dateChooser, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnClearFilters))
+                .addContainerGap(10, Short.MAX_VALUE))
+        );
+
+        jTableHistory.setFont(new java.awt.Font("Serif", 0, 18)); // NOI18N
+        jTableHistory.setForeground(new java.awt.Color(197, 160, 114));
+        jTableHistory.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null}
+            },
+            new String [] {
+                "OrderID", "Date", "OrderDate", "OrderType", "Products", "TotalAmount"
+            }
+        ));
+        jScrollPane1.setViewportView(jTableHistory);
+
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 1368, Short.MAX_VALUE)
+                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(0, 0, Short.MAX_VALUE))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 0, Short.MAX_VALUE))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 616, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1530, 820));
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void btnDashBoardActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDashBoardActionPerformed
+        // TODO add your handling code here:
+        DashBoard a = new DashBoard();
+       a.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnDashBoardActionPerformed
+
+    private void btnProductsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnProductsActionPerformed
+        // TODO add your handling code here:
+        Products c = new Products();
+       c.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnProductsActionPerformed
+
+    private void btnCategoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCategoryActionPerformed
+        // TODO add your handling code here:
+        Category d = new Category();
+       d.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnCategoryActionPerformed
+
+    private void btnAddonsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddonsActionPerformed
+        // TODO add your handling code here:
+        Addons e = new Addons();
+       e.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnAddonsActionPerformed
+
+    private void btnHistoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnHistoryActionPerformed
+        // TODO add your handling code here:
+        History f = new History();
+       f.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnHistoryActionPerformed
+
+    private void btnUtilitiesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUtilitiesActionPerformed
+        // TODO add your handling code here:
+        Utilities g = new Utilities();
+       g.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnUtilitiesActionPerformed
+
+    private void btnLogOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogOutActionPerformed
+        // TODO add your handling code here:
+        Login h = new Login();
+       h.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnLogOutActionPerformed
+
+    private void btnViewDetailsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnViewDetailsActionPerformed
+        // TODO add your handling code here:
+       int row = jTableHistory.getSelectedRow();
+
+    if(row == -1){
+        JOptionPane.showMessageDialog(this, "📋 Select an order first!");
+        return;
+    }
+    
+    Object orderIdObj = historyModel.getValueAt(row, 0);
+    
+    // Check if it's the TOTAL row (handles both "TOTAL" and "🔢TOTAL")
+    if (orderIdObj instanceof String && 
+        (((String) orderIdObj).equals("TOTAL") || 
+         ((String) orderIdObj).startsWith("🔢"))) {
+        JOptionPane.showMessageDialog(this, "📋 Please select a valid order (not the TOTAL row)!");
+        return;
+    }
+    
+    try {
+        // Safe conversion with validation
+        if (!(orderIdObj instanceof Integer)) {
+            throw new NumberFormatException("Invalid order ID");
+        }
+        int orderId = (Integer) orderIdObj;
+        showOrderDetails(orderId);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "❌ Invalid order selected: " + e.getMessage());
+        e.printStackTrace();
+    }
+    }//GEN-LAST:event_btnViewDetailsActionPerformed
+
+    private void btnLoadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLoadActionPerformed
+        // TODO add your handling code here:
+         loadOrders();
+    }//GEN-LAST:event_btnLoadActionPerformed
+
+    private void txtSearchKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtSearchKeyReleased
+        // TODO add your handling code here:
+    loadOrders();
+    }//GEN-LAST:event_txtSearchKeyReleased
+
+    private void btnSizeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSizeActionPerformed
+        // TODO add your handling code here:
+        Size b = new Size();
+        b.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_btnSizeActionPerformed
+
+    private void dateChooserPropertyChange(java.beans.PropertyChangeEvent evt) {//GEN-FIRST:event_dateChooserPropertyChange
+        // TODO add your handling code here:
+         if ("date".equals(evt.getPropertyName())) {
+            loadOrders();  // Filter when date changes
+        }
+    }//GEN-LAST:event_dateChooserPropertyChange
+
+    private void btnClearFiltersActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearFiltersActionPerformed
+        // TODO add your handling code here:
+        txtSearch.setText("");
+        dateChooser.setDate(null);
+        loadOrders();  // Show all orders
+    
+    }//GEN-LAST:event_btnClearFiltersActionPerformed
+
+    private void btnInventoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInventoryActionPerformed
+        // TODO add your handling code here:
+        Inventory z = new Inventory();
+       z.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnInventoryActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(History.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(History.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(History.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(History.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new History().setVisible(true);
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnAddons;
+    private javax.swing.JButton btnCategory;
+    private javax.swing.JButton btnClearFilters;
+    private javax.swing.JButton btnDashBoard;
+    private javax.swing.JButton btnHistory;
+    private javax.swing.JButton btnInventory;
+    private javax.swing.JButton btnLoad;
+    private javax.swing.JButton btnLogOut;
+    private javax.swing.JButton btnProducts;
+    private javax.swing.JButton btnSettings;
+    private javax.swing.JButton btnSize;
+    private javax.swing.JButton btnUtilities;
+    private javax.swing.JButton btnViewDetails;
+    private com.toedter.calendar.JDateChooser dateChooser;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTable jTableHistory;
+    private javax.swing.JLabel lblWelcome;
+    private javax.swing.JTextField txtSearch;
+    // End of variables declaration//GEN-END:variables
+}
