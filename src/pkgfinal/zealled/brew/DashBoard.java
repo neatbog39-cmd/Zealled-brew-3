@@ -342,8 +342,8 @@ public class DashBoard extends javax.swing.JFrame {
         lblWelcome = new javax.swing.JLabel();
         btnSize = new javax.swing.JButton();
         jLabel8 = new javax.swing.JLabel();
-        btnSettings = new javax.swing.JButton();
         btnInventory = new javax.swing.JButton();
+        btnPOS = new javax.swing.JButton();
         jPanel9 = new javax.swing.JPanel();
         jTabbedPane2 = new javax.swing.JTabbedPane();
         jPanel6 = new javax.swing.JPanel();
@@ -468,17 +468,17 @@ public class DashBoard extends javax.swing.JFrame {
 
         jLabel8.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/admin1.1.png"))); // NOI18N
 
-        btnSettings.setText("Settings");
-        btnSettings.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnSettingsActionPerformed(evt);
-            }
-        });
-
         btnInventory.setText("Inventory");
         btnInventory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnInventoryActionPerformed(evt);
+            }
+        });
+
+        btnPOS.setText("POS");
+        btnPOS.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPOSActionPerformed(evt);
             }
         });
 
@@ -493,8 +493,8 @@ public class DashBoard extends javax.swing.JFrame {
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addGap(34, 34, 34)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(btnSettings)
-                    .addComponent(btnInventory))
+                    .addComponent(btnInventory)
+                    .addComponent(btnPOS))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(lblWelcome, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
@@ -517,7 +517,7 @@ public class DashBoard extends javax.swing.JFrame {
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addGap(29, 29, 29)
                 .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 138, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 77, Short.MAX_VALUE)
                 .addComponent(btnDashBoard)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnProducts)
@@ -532,12 +532,13 @@ public class DashBoard extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnUtilities)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(lblWelcome, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel3Layout.createSequentialGroup()
-                        .addComponent(btnSettings)
-                        .addGap(18, 18, 18)
-                        .addComponent(btnInventory)))
+                        .addGap(41, 41, 41)
+                        .addComponent(btnInventory)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnPOS)))
                 .addGap(64, 64, 64)
                 .addComponent(btnLogOut)
                 .addGap(57, 57, 57))
@@ -943,10 +944,6 @@ public class DashBoard extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_btnSizeActionPerformed
 
-    private void btnSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSettingsActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_btnSettingsActionPerformed
-
     private void btnInventoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInventoryActionPerformed
         // TODO add your handling code here:
         Inventory z = new Inventory();
@@ -965,6 +962,13 @@ public class DashBoard extends javax.swing.JFrame {
         btnRefresh.setEnabled(true);
     });
     }//GEN-LAST:event_btnRefreshActionPerformed
+
+    private void btnPOSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPOSActionPerformed
+        // TODO add your handling code here:
+        AdminPOS q = new AdminPOS();
+       q.setVisible(true);
+       this.dispose();
+    }//GEN-LAST:event_btnPOSActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1008,9 +1012,9 @@ public class DashBoard extends javax.swing.JFrame {
     private javax.swing.JButton btnHistory;
     private javax.swing.JButton btnInventory;
     private javax.swing.JButton btnLogOut;
+    private javax.swing.JButton btnPOS;
     private javax.swing.JButton btnProducts;
     private javax.swing.JButton btnRefresh;
-    private javax.swing.JButton btnSettings;
     private javax.swing.JButton btnSize;
     private javax.swing.JButton btnUtilities;
     private javax.swing.JLabel jLabel1;

@@ -1,0 +1,301 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
+ */
+package pkgfinal.zealled.brew;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import javax.swing.JOptionPane;
+
+/**
+ *
+ * @author ASUS
+ */
+public class Settings extends javax.swing.JFrame {
+    private Inventory inventory;
+
+    /**
+     * Creates new form Settings
+     */
+    public Settings() {
+        initComponents();
+        loadCurrentSettings();
+    }
+   public Settings(Inventory inventory) {
+        this();
+        this.inventory = inventory;  // Fixed: lowercase 'i'
+    }
+    
+    private void loadCurrentSettings() {
+        try (Connection con = ConnectorXampp.connect()) {
+            String sql = "SELECT critical_low_min, critical_low_max, low_stock_min, low_stock_max FROM stock_settings LIMIT 1";
+            
+            try (PreparedStatement pst = con.prepareStatement(sql);
+                 ResultSet rs = pst.executeQuery()) {
+                
+                if (rs.next()) {
+                    txtCriticalLowMin.setText(String.valueOf(rs.getInt("critical_low_min")));
+                    txtCriticalLowMax.setText(String.valueOf(rs.getInt("critical_low_max")));
+                    txtLowStockMin.setText(String.valueOf(rs.getInt("low_stock_min")));
+                    txtLowStockMax.setText(String.valueOf(rs.getInt("low_stock_max")));
+                } else {
+                    loadDefaultSettings();
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error loading settings: " + e.getMessage());
+            loadDefaultSettings();
+        }
+    }
+    
+    private void loadDefaultSettings() {
+        txtCriticalLowMin.setText("1");
+        txtCriticalLowMax.setText("5");
+        txtLowStockMin.setText("6");
+        txtLowStockMax.setText("10");
+    }
+    
+    private void saveSettings() {
+    try {
+        int criticalMin = Integer.parseInt(txtCriticalLowMin.getText());
+        int criticalMax = Integer.parseInt(txtCriticalLowMax.getText());
+        int lowMin = Integer.parseInt(txtLowStockMin.getText());
+        int lowMax = Integer.parseInt(txtLowStockMax.getText());
+        
+        // Validation
+        if (criticalMin <= 0 || criticalMax <= 0 || lowMin <= 0 || lowMax <= 0) {
+            JOptionPane.showMessageDialog(this, "All values must be greater than 0");
+            return;
+        }
+        if (criticalMin >= criticalMax || lowMin >= lowMax) {
+            JOptionPane.showMessageDialog(this, "Min value must be less than Max value");
+            return;
+        }
+        if (criticalMax >= lowMin) {
+            JOptionPane.showMessageDialog(this, "Critical Low Max must be less than Low Stock Min");
+            return;
+        }
+        
+        try (Connection con = ConnectorXampp.connect()) {
+            // DELETE old settings first, then INSERT new
+            String deleteSql = "DELETE FROM stock_settings";
+            try (PreparedStatement deletePst = con.prepareStatement(deleteSql)) {
+                deletePst.executeUpdate();
+            }
+            
+            String insertSql = """
+                INSERT INTO stock_settings (critical_low_min, critical_low_max, low_stock_min, low_stock_max) 
+                VALUES (?, ?, ?, ?)
+            """;
+            
+            try (PreparedStatement pst = con.prepareStatement(insertSql)) {
+                pst.setInt(1, criticalMin);
+                pst.setInt(2, criticalMax);
+                pst.setInt(3, lowMin);
+                pst.setInt(4, lowMax);
+                pst.executeUpdate();
+            }
+            
+            JOptionPane.showMessageDialog(this, "Settings saved successfully!\nCritical Low: " + criticalMin + "-" + criticalMax + "\nLow Stock: " + lowMin + "-" + lowMax);
+            
+            if (this.inventory != null) {
+                this.inventory.refreshInventoryData();  // Refresh Inventory
+                this.inventory.repaint();  // Force UI update
+            }
+            Inventory z = new Inventory();
+            z.setVisible(true);
+            this.dispose();  // Close settings window
+        }
+    } catch (NumberFormatException e) {
+        JOptionPane.showMessageDialog(this, "Please enter valid numbers");
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error saving settings: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+    
+    private void resetDefaultSettings() {
+        loadDefaultSettings();
+        JOptionPane.showMessageDialog(this, "Settings reset to defaults");
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        txtCriticalLowMin = new javax.swing.JTextField();
+        txtCriticalLowMax = new javax.swing.JTextField();
+        txtLowStockMin = new javax.swing.JTextField();
+        txtLowStockMax = new javax.swing.JTextField();
+        btnSave = new javax.swing.JButton();
+        btnReset = new javax.swing.JButton();
+        btnBack = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(new java.awt.Color(40, 40, 40));
+
+        txtCriticalLowMin.setText("jTextField1");
+
+        txtCriticalLowMax.setText("jTextField2");
+
+        txtLowStockMin.setText("jTextField3");
+
+        txtLowStockMax.setText("jTextField4");
+
+        btnSave.setText("Save");
+        btnSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSaveActionPerformed(evt);
+            }
+        });
+
+        btnReset.setText("Reset");
+        btnReset.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnResetActionPerformed(evt);
+            }
+        });
+
+        btnBack.setText("Back");
+        btnBack.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnBackActionPerformed(evt);
+            }
+        });
+
+        jLabel1.setText("Low");
+
+        jLabel2.setText("Critically");
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(320, 320, 320)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(46, 46, 46)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(txtLowStockMin, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(txtLowStockMax, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(txtCriticalLowMin, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(35, 35, 35)
+                                .addComponent(txtCriticalLowMax, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(329, 329, 329)
+                        .addComponent(btnSave)
+                        .addGap(55, 55, 55)
+                        .addComponent(btnReset))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(404, 404, 404)
+                        .addComponent(btnBack)))
+                .addContainerGap(232, Short.MAX_VALUE))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGap(168, 168, 168)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtCriticalLowMin, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtCriticalLowMax, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel2))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtLowStockMin, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtLowStockMax, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel1))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(65, 65, 65)
+                        .addComponent(btnSave))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(44, 44, 44)
+                        .addComponent(btnReset)))
+                .addGap(27, 27, 27)
+                .addComponent(btnBack)
+                .addContainerGap(120, Short.MAX_VALUE))
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
+        // TODO add your handling code here:
+         saveSettings();
+    }//GEN-LAST:event_btnSaveActionPerformed
+
+    private void btnResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnResetActionPerformed
+        // TODO add your handling code here:
+        resetDefaultSettings();
+    }//GEN-LAST:event_btnResetActionPerformed
+
+    private void btnBackActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBackActionPerformed
+        // TODO add your handling code here:
+         Inventory i = new Inventory();
+        i.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_btnBackActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+                if ("Nimbus".equals(info.getName())) {
+                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+                    break;
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (InstantiationException ex) {
+            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(Settings.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new Settings().setVisible(true);
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnBack;
+    private javax.swing.JButton btnReset;
+    private javax.swing.JButton btnSave;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JTextField txtCriticalLowMax;
+    private javax.swing.JTextField txtCriticalLowMin;
+    private javax.swing.JTextField txtLowStockMax;
+    private javax.swing.JTextField txtLowStockMin;
+    // End of variables declaration//GEN-END:variables
+}

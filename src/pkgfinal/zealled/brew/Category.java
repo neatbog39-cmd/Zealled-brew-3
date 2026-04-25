@@ -399,8 +399,8 @@ public class Category extends javax.swing.JFrame {
         lblWelcome = new javax.swing.JLabel();
         btnSize = new javax.swing.JButton();
         jLabel8 = new javax.swing.JLabel();
-        btnSettings = new javax.swing.JButton();
         btnInventory = new javax.swing.JButton();
+        btnPOS = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
@@ -510,17 +510,17 @@ public class Category extends javax.swing.JFrame {
 
         jLabel8.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/admin1.1.png"))); // NOI18N
 
-        btnSettings.setText("Settings");
-        btnSettings.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnSettingsActionPerformed(evt);
-            }
-        });
-
         btnInventory.setText("Inventory");
         btnInventory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnInventoryActionPerformed(evt);
+            }
+        });
+
+        btnPOS.setText("POS");
+        btnPOS.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPOSActionPerformed(evt);
             }
         });
 
@@ -551,9 +551,9 @@ public class Category extends javax.swing.JFrame {
                         .addGap(17, 17, 17))))
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(btnInventory)
-                    .addComponent(btnSettings))
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(btnPOS)
+                    .addComponent(btnInventory))
                 .addGap(33, 33, 33))
         );
         jPanel3Layout.setVerticalGroup(
@@ -581,11 +581,11 @@ public class Category extends javax.swing.JFrame {
                 .addComponent(btnHistory)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnUtilities)
-                .addGap(18, 18, 18)
-                .addComponent(btnSettings)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(53, 53, 53)
                 .addComponent(btnInventory)
-                .addGap(152, 152, 152)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnPOS)
+                .addGap(117, 117, 117)
                 .addComponent(btnLogOut)
                 .addGap(57, 57, 57))
         );
@@ -924,16 +924,19 @@ public class Category extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_btnSizeActionPerformed
 
-    private void btnSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSettingsActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_btnSettingsActionPerformed
-
     private void btnInventoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInventoryActionPerformed
         // TODO add your handling code here:
         Inventory z = new Inventory();
        z.setVisible(true);
        this.dispose();
     }//GEN-LAST:event_btnInventoryActionPerformed
+
+    private void btnPOSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPOSActionPerformed
+        // TODO add your handling code here:
+        AdminPOS q = new AdminPOS();
+        q.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_btnPOSActionPerformed
 
     /**
      * @param args the command line arguments
@@ -983,8 +986,8 @@ public class Category extends javax.swing.JFrame {
     private javax.swing.JButton btnHistory;
     private javax.swing.JButton btnInventory;
     private javax.swing.JButton btnLogOut;
+    private javax.swing.JButton btnPOS;
     private javax.swing.JButton btnProducts;
-    private javax.swing.JButton btnSettings;
     private javax.swing.JButton btnSize;
     private javax.swing.JButton btnUtilities;
     private javax.swing.JLabel jLabel1;

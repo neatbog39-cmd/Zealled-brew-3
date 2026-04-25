@@ -265,8 +265,8 @@ public class Size extends javax.swing.JFrame {
         btnLogOut = new javax.swing.JButton();
         btnUtilities = new javax.swing.JButton();
         jLabel8 = new javax.swing.JLabel();
-        btnSettings = new javax.swing.JButton();
         btnInventory = new javax.swing.JButton();
+        btnPOS = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         txtSearch = new javax.swing.JTextField();
         jLabel1 = new javax.swing.JLabel();
@@ -374,12 +374,17 @@ public class Size extends javax.swing.JFrame {
 
         jLabel8.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/admin1.1.png"))); // NOI18N
 
-        btnSettings.setText("Settings");
-
         btnInventory.setText("Inventory");
         btnInventory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnInventoryActionPerformed(evt);
+            }
+        });
+
+        btnPOS.setText("POS");
+        btnPOS.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPOSActionPerformed(evt);
             }
         });
 
@@ -410,8 +415,8 @@ public class Size extends javax.swing.JFrame {
                                 .addGap(17, 17, 17))
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
                                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(btnInventory)
-                                    .addComponent(btnSettings))
+                                    .addComponent(btnPOS)
+                                    .addComponent(btnInventory))
                                 .addGap(35, 35, 35))))))
         );
         jPanel3Layout.setVerticalGroup(
@@ -433,11 +438,11 @@ public class Size extends javax.swing.JFrame {
                 .addComponent(btnHistory)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnUtilities)
-                .addGap(18, 18, 18)
-                .addComponent(btnSettings)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(47, 47, 47)
                 .addComponent(btnInventory)
-                .addGap(158, 158, 158)
+                .addGap(29, 29, 29)
+                .addComponent(btnPOS)
+                .addGap(106, 106, 106)
                 .addComponent(btnLogOut)
                 .addGap(57, 57, 57))
         );
@@ -790,6 +795,13 @@ public class Size extends javax.swing.JFrame {
        this.dispose();
     }//GEN-LAST:event_btnInventoryActionPerformed
 
+    private void btnPOSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPOSActionPerformed
+        // TODO add your handling code here:
+        AdminPOS q = new AdminPOS();
+        q.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_btnPOSActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -840,8 +852,8 @@ public class Size extends javax.swing.JFrame {
     private javax.swing.JButton btnHistory;
     private javax.swing.JButton btnInventory;
     private javax.swing.JButton btnLogOut;
+    private javax.swing.JButton btnPOS;
     private javax.swing.JButton btnProducts;
-    private javax.swing.JButton btnSettings;
     private javax.swing.JButton btnSize;
     private javax.swing.JButton btnUtilities;
     private javax.swing.JLabel jLabel1;

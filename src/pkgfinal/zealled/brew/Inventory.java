@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.JOptionPane; 
+import java.sql.SQLException;  
 
 /**
  *
@@ -23,8 +25,12 @@ public class Inventory extends javax.swing.JFrame {
         setupInventoryTable();
         loadInventoryData();
         loadProductStats();
+        loadInventoryData();
     }
-    
+    public void refreshInventoryData() {
+    loadProductStats();
+    loadInventoryData();
+}
      // ========================= TABLE SETUP =========================
     private void setupInventoryTable() {
     String[] columns = {"Product Name", "Category", "Size", "Quantity", "Status"};  // Added Status
@@ -36,69 +42,85 @@ public class Inventory extends javax.swing.JFrame {
 
     // ========================= PRODUCT STATS =========================
     private void loadProductStats() {
-        try (Connection con = ConnectorXampp.connect()) {
-            // TOTAL PRODUCTS
-            String sqlTotal = "SELECT COUNT(*) as total FROM products";
-            try (PreparedStatement pst = con.prepareStatement(sqlTotal);
-                 ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    lblTotalProducts.setText("Total Products: " + rs.getInt("total"));
-                }
-            }
-
-            // CRITICAL LOW (Quantity <= 5 AND > 0)
-            String sqlCritical = """
-                SELECT COUNT(*) as critical_count 
-                FROM products 
-                WHERE Quantity > 0 AND Quantity <= 5
-            """;
-            try (PreparedStatement pst = con.prepareStatement(sqlCritical);
-                 ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    lblCriticalLowCount.setText("Critical Low: " + rs.getInt("critical_count"));
-                }
-            }
-
-            // LOW STOCK (Quantity 6-10)
-            String sqlLow = """
-                SELECT COUNT(*) as low_count 
-                FROM products 
-                WHERE Quantity >= 6 AND Quantity <= 10
-            """;
-            try (PreparedStatement pst = con.prepareStatement(sqlLow);
-                 ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    lblLowStockCount.setText("Low Stock: " + rs.getInt("low_count"));
-                }
-            }
-
-            // OUT OF STOCK (Quantity = 0)
-            String sqlOut = "SELECT COUNT(*) as out_count FROM products WHERE Quantity = 0";
-            try (PreparedStatement pst = con.prepareStatement(sqlOut);
-                 ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    lblOutOfStockCount.setText("Out of Stock: " + rs.getInt("out_count"));
-                }
+    StockThresholds thresholds = getStockThresholds();
+    
+    try (Connection con = ConnectorXampp.connect()) {
+        // TOTAL PRODUCTS
+        String sqlTotal = "SELECT COUNT(*) as total FROM products";
+        try (PreparedStatement pst = con.prepareStatement(sqlTotal);
+             ResultSet rs = pst.executeQuery()) {
+            if (rs.next()) {
+                lblTotalProducts.setText("Total Products: " + rs.getInt("total"));
             }
         } catch (Exception e) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Error loading product stats: " + e.getMessage());
+            System.err.println("Error loading total products: " + e.getMessage());
         }
+
+        // CRITICAL LOW
+        String sqlCritical = String.format("""
+            SELECT COUNT(*) as critical_count 
+            FROM products 
+            WHERE Quantity > 0 AND Quantity >= %d AND Quantity <= %d
+        """, thresholds.criticalLowMin, thresholds.criticalLowMax);
+        
+        try (PreparedStatement pst = con.prepareStatement(sqlCritical);
+             ResultSet rs = pst.executeQuery()) {
+            if (rs.next()) {
+                lblCriticalLowCount.setText("Critical Low: " + rs.getInt("critical_count"));
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading critical low: " + e.getMessage());
+        }
+
+        // LOW STOCK
+        String sqlLow = String.format("""
+            SELECT COUNT(*) as low_count 
+            FROM products 
+            WHERE Quantity >= %d AND Quantity <= %d
+        """, thresholds.lowStockMin, thresholds.lowStockMax);
+        
+        try (PreparedStatement pst = con.prepareStatement(sqlLow);
+             ResultSet rs = pst.executeQuery()) {
+            if (rs.next()) {
+                lblLowStockCount.setText("Low Stock: " + rs.getInt("low_count"));
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading low stock: " + e.getMessage());
+        }
+
+        // OUT OF STOCK
+        String sqlOut = "SELECT COUNT(*) as out_count FROM products WHERE Quantity = 0";
+        try (PreparedStatement pst = con.prepareStatement(sqlOut);
+             ResultSet rs = pst.executeQuery()) {
+            if (rs.next()) {
+                lblOutOfStockCount.setText("Out of Stock: " + rs.getInt("out_count"));
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading out of stock: " + e.getMessage());
+        }
+        
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error loading product stats: " + e.getMessage());
     }
+}
 
     // ========================= INVENTORY TABLE =========================
     private void loadInventoryData() {
     try (Connection con = ConnectorXampp.connect()) {
-        String sql = """
+        StockThresholds thresholds = getStockThresholds();
+        
+        String sql = String.format("""
             SELECT Name, Category, Size, Quantity
             FROM products
             ORDER BY 
                 CASE 
                     WHEN Quantity = 0 THEN 1
-                    WHEN Quantity <= 5 THEN 2
-                    WHEN Quantity <= 10 THEN 3
+                    WHEN Quantity >= %d AND Quantity <= %d THEN 2
+                    WHEN Quantity >= %d AND Quantity <= %d THEN 3
                     ELSE 4
                 END, Quantity ASC
-        """;
+        """, thresholds.criticalLowMin, thresholds.criticalLowMax, 
+           thresholds.lowStockMin, thresholds.lowStockMax);
 
         try (PreparedStatement pst = con.prepareStatement(sql);
              ResultSet rs = pst.executeQuery()) {
@@ -113,8 +135,8 @@ public class Inventory extends javax.swing.JFrame {
                     rs.getString("Name"),
                     rs.getString("Category"),
                     rs.getString("Size"),
-                    quantity,  // Fixed: Only ONE quantity
-                    status     // Status column
+                    quantity,
+                    status
                 });
             }
         }
@@ -125,10 +147,51 @@ public class Inventory extends javax.swing.JFrame {
 }
     
     private String getStatus(int quantity) {
+    StockThresholds thresholds = getStockThresholds();
+    
     if (quantity == 0) return "OUT OF STOCK";
-    else if (quantity <= 5) return "CRITICAL LOW";
-    else if (quantity <= 10) return "LOW STOCK";
+    else if (quantity >= thresholds.criticalLowMin && quantity <= thresholds.criticalLowMax) 
+        return "CRITICAL LOW";
+    else if (quantity >= thresholds.lowStockMin && quantity <= thresholds.lowStockMax) 
+        return "LOW STOCK";
     else return "IN STOCK";
+}
+    
+    private StockThresholds getStockThresholds() {
+    StockThresholds thresholds = new StockThresholds();
+    try (Connection con = ConnectorXampp.connect()) {
+        String sql = "SELECT critical_low_min, critical_low_max, low_stock_min, low_stock_max FROM stock_settings LIMIT 1";
+        try (PreparedStatement pst = con.prepareStatement(sql);
+             ResultSet rs = pst.executeQuery()) {
+            if (rs.next()) {
+                thresholds.criticalLowMin = rs.getInt("critical_low_min");
+                thresholds.criticalLowMax = rs.getInt("critical_low_max");
+                thresholds.lowStockMin = rs.getInt("low_stock_min");
+                thresholds.lowStockMax = rs.getInt("low_stock_max");
+            } else {
+                // Defaults
+                thresholds.criticalLowMin = 1;
+                thresholds.criticalLowMax = 5;
+                thresholds.lowStockMin = 6;
+                thresholds.lowStockMax = 10;
+            }
+        }
+    } catch (SQLException e) {
+        // Use defaults on error
+        thresholds.criticalLowMin = 1;
+        thresholds.criticalLowMax = 5;
+        thresholds.lowStockMin = 6;
+        thresholds.lowStockMax = 10;
+    }
+    return thresholds;
+}
+
+    // Helper class for thresholds
+    private static class StockThresholds {
+    int criticalLowMin = 1;
+    int criticalLowMax = 5;
+    int lowStockMin = 6;
+    int lowStockMax = 10;
 }
     
 
@@ -158,8 +221,10 @@ public class Inventory extends javax.swing.JFrame {
         btnUtilities = new javax.swing.JButton();
         btnSettings = new javax.swing.JButton();
         btnInventory = new javax.swing.JButton();
+        btnPOS = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setBackground(new java.awt.Color(40, 40, 40));
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jTableInventory.setModel(new javax.swing.table.DefaultTableModel(
@@ -185,16 +250,16 @@ public class Inventory extends javax.swing.JFrame {
         });
         getContentPane().add(Refreshbtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(931, 183, -1, -1));
 
-        lblTotalProducts.setText("jLabel1");
+        lblTotalProducts.setText("Total Products:");
         getContentPane().add(lblTotalProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(386, 161, 106, -1));
 
-        lblCriticalLowCount.setText("jLabel2");
+        lblCriticalLowCount.setText("Critcal Low:");
         getContentPane().add(lblCriticalLowCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(498, 161, 109, -1));
 
-        lblLowStockCount.setText("jLabel3");
+        lblLowStockCount.setText("Low Stock:");
         getContentPane().add(lblLowStockCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(386, 186, 106, -1));
 
-        lblOutOfStockCount.setText("jLabel4");
+        lblOutOfStockCount.setText("Out of Stock:");
         getContentPane().add(lblOutOfStockCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(498, 186, 175, -1));
 
         btnDashBoard.setBackground(new java.awt.Color(18, 20, 23));
@@ -206,7 +271,7 @@ public class Inventory extends javax.swing.JFrame {
                 btnDashBoardActionPerformed(evt);
             }
         });
-        getContentPane().add(btnDashBoard, new org.netbeans.lib.awtextra.AbsoluteConstraints(16, 29, 1239, -1));
+        getContentPane().add(btnDashBoard, new org.netbeans.lib.awtextra.AbsoluteConstraints(16, 29, 280, -1));
 
         btnProducts.setBackground(new java.awt.Color(18, 20, 23));
         btnProducts.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -217,7 +282,7 @@ public class Inventory extends javax.swing.JFrame {
                 btnProductsActionPerformed(evt);
             }
         });
-        getContentPane().add(btnProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(63, 112, 1192, -1));
+        getContentPane().add(btnProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(63, 112, 230, -1));
 
         btnCategory.setBackground(new java.awt.Color(18, 20, 23));
         btnCategory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -280,7 +345,7 @@ public class Inventory extends javax.swing.JFrame {
                 btnSettingsActionPerformed(evt);
             }
         });
-        getContentPane().add(btnSettings, new org.netbeans.lib.awtextra.AbsoluteConstraints(190, 450, -1, -1));
+        getContentPane().add(btnSettings, new org.netbeans.lib.awtextra.AbsoluteConstraints(950, 110, -1, -1));
 
         btnInventory.setText("Inventory");
         btnInventory.addActionListener(new java.awt.event.ActionListener() {
@@ -289,6 +354,14 @@ public class Inventory extends javax.swing.JFrame {
             }
         });
         getContentPane().add(btnInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 540, -1, -1));
+
+        btnPOS.setText("POS");
+        btnPOS.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnPOSActionPerformed(evt);
+            }
+        });
+        getContentPane().add(btnPOS, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 490, -1, -1));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -350,6 +423,9 @@ public class Inventory extends javax.swing.JFrame {
 
     private void btnSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSettingsActionPerformed
         // TODO add your handling code here:
+        Settings i = new Settings();
+        i.setVisible(true);
+        this.dispose();
     }//GEN-LAST:event_btnSettingsActionPerformed
 
     private void btnInventoryActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInventoryActionPerformed
@@ -358,6 +434,13 @@ public class Inventory extends javax.swing.JFrame {
         z.setVisible(true);
         this.dispose();
     }//GEN-LAST:event_btnInventoryActionPerformed
+
+    private void btnPOSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPOSActionPerformed
+        // TODO add your handling code here:
+        AdminPOS q = new AdminPOS();
+        q.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_btnPOSActionPerformed
 
     /**
      * @param args the command line arguments
@@ -402,6 +485,7 @@ public class Inventory extends javax.swing.JFrame {
     private javax.swing.JButton btnDashBoard;
     private javax.swing.JButton btnHistory;
     private javax.swing.JButton btnInventory;
+    private javax.swing.JButton btnPOS;
     private javax.swing.JButton btnProducts;
     private javax.swing.JButton btnSettings;
     private javax.swing.JButton btnSize;
