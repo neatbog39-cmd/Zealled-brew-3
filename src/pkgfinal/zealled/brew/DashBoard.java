@@ -217,6 +217,7 @@ public class DashBoard extends javax.swing.JFrame {
         try (PreparedStatement pst = con.prepareStatement(sql);
              ResultSet rs = pst.executeQuery()) {
             if (rs.next()) {
+                
                 lblTodayOrders.setText("Today's Orders: " + rs.getInt("orders"));
                 lblTodaySales.setText("Today's Sales: ₱" + String.format("%.2f", rs.getDouble("total")));
                 lblTodayAvgOrder.setText("Avg Order: ₱" + String.format("%.2f", rs.getDouble("avg")));

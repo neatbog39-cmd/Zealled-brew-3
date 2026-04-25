@@ -364,8 +364,8 @@ public class POS extends javax.swing.JFrame {
         "VAT(12%):   ₱" + String.format("%.2f", vat) + "\n" +      
         "TOTAL:      ₱" + String.format("%.2f", total) + "\n" +   
         (cashInput.isEmpty() ? "" : 
-         "💵 Cash:     ₱" + String.format("%.2f", Double.parseDouble(cashInput)) + "\n" +
-         "🔄 Change:   ₱" + String.format("%.2f", change))
+        "Cash:       ₱" + String.format("%.2f", Double.parseDouble(cashInput)) + "\n" +
+        "Change:     ₱" + String.format("%.2f", change))
     );
     txtDisplayPOS.setCaretPosition(txtDisplayPOS.getDocument().getLength());
 }
@@ -416,11 +416,11 @@ public class POS extends javax.swing.JFrame {
         double vat = vatable * 0.12;
         
         if (JOptionPane.showConfirmDialog(this, 
-            "💰 Vatable:  ₱" + String.format("%.2f", vatable) + "\n" +
-            "💰 VAT(12%): ₱" + String.format("%.2f", vat) + "\n" +
-            "💰 TOTAL:    ₱" + String.format("%.2f", total) + "\n\n" +
-            "💵 Cash:     ₱" + String.format("%.2f", cash) + "\n" +
-            "🔄 Change:   ₱" + String.format("%.2f", cash - total),
+            "Vatable:  ₱" + String.format("%.2f", vatable) + "\n" +
+            "VAT(12%): ₱" + String.format("%.2f", vat) + "\n" +
+            "TOTAL:    ₱" + String.format("%.2f", total) + "\n\n" +
+            "Cash:     ₱" + String.format("%.2f", cash) + "\n" +
+            "Change:   ₱" + String.format("%.2f", cash - total),
             "Confirm Payment", JOptionPane.YES_OPTION) == JOptionPane.YES_OPTION) {
             
             saveOrder(cash, cash - total);
