@@ -203,17 +203,16 @@ public class History extends javax.swing.JFrame {
         historyModel.setRowCount(0);
 
         String sql = """
-            SELECT o.OrderID, o.OrderDate, o.OrderType, 
-                   GROUP_CONCAT(p.Name SEPARATOR ', ') AS Products,
-                   SUM(od.Subtotal) AS OrderSubtotal,
-                   o.TotalAmount, o.`Cash`, o.`Change`
-            FROM orders o 
-            JOIN order_details od ON o.OrderID = od.OrderID 
-            JOIN products p ON od.ProductID = p.ProductID 
-            GROUP BY o.OrderID 
-            ORDER BY o.OrderID DESC
-            LIMIT 100
-            """;
+        SELECT o.OrderID, o.OrderDate, o.OrderType, 
+               COALESCE(GROUP_CONCAT(COALESCE(p.Name, 'DELETED') SEPARATOR ', '), 'EMPTY') AS Products,
+               COALESCE(SUM(od.Subtotal), 0) AS OrderSubtotal,
+               o.TotalAmount, o.`Cash`, o.`Change`
+        FROM orders o 
+        LEFT JOIN order_details od ON o.OrderID = od.OrderID 
+        LEFT JOIN products p ON od.ProductID = p.ProductID 
+        GROUP BY o.OrderID 
+        ORDER BY o.OrderID DESC LIMIT 100
+        """;
 
         try (Connection con = ConnectorXampp.connect();
              Statement st = con.createStatement();
