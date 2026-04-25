@@ -1056,13 +1056,15 @@ public class Products extends javax.swing.JFrame {
             con.setAutoCommit(false);
             
             // Delete orders first
-            String deleteOrdersSql = "DELETE FROM order_details WHERE ProductID = ?";
-            try (java.sql.PreparedStatement pstOrders = con.prepareStatement(deleteOrdersSql)) {
-                pstOrders.setInt(1, id);
-                int ordersDeleted = pstOrders.executeUpdate();
-                
-                // Delete product
-                String deleteProductSql = "DELETE FROM products WHERE ProductID = ?";
+//            String deleteOrdersSql = "DELETE FROM order_details WHERE ProductID = ?";
+//            try (java.sql.PreparedStatement pstOrders = con.prepareStatement(deleteOrdersSql)) {
+//                pstOrders.setInt(1, id);
+//                int ordersDeleted = pstOrders.executeUpdate();
+//                
+//                // Delete product
+//                
+//            }
+            String deleteProductSql = "DELETE FROM products WHERE ProductID = ?";
                 try (java.sql.PreparedStatement pstProduct = con.prepareStatement(deleteProductSql)) {
                     pstProduct.setInt(1, id);
                     int productDeleted = pstProduct.executeUpdate();
@@ -1071,11 +1073,8 @@ public class Products extends javax.swing.JFrame {
                     
                     javax.swing.JOptionPane.showMessageDialog(this, 
                         "✅ '" + productName + "' DELETED!\n" +
-                        "📦 Orders: " + ordersDeleted + "\n" +
                         "🗑️ Product: " + productDeleted);
                 }
-            }
-            
             loadStockData();
             clearFields();
             resetButtons();
