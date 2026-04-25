@@ -643,6 +643,7 @@ public class AdminPOS extends javax.swing.JFrame {
         btnUtilities = new javax.swing.JButton();
         btnInventory = new javax.swing.JButton();
         btnPOS = new javax.swing.JButton();
+        btnLogOut = new javax.swing.JButton();
 
         jTableCart.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -1038,6 +1039,17 @@ public class AdminPOS extends javax.swing.JFrame {
         });
         jPanel1.add(btnPOS, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 680, 100, -1));
 
+        btnLogOut.setBackground(new java.awt.Color(18, 20, 23));
+        btnLogOut.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnLogOut.setForeground(new java.awt.Color(197, 160, 114));
+        btnLogOut.setText("Log Out");
+        btnLogOut.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLogOutActionPerformed(evt);
+            }
+        });
+        jPanel1.add(btnLogOut, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 680, -1, -1));
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -1353,6 +1365,13 @@ public class AdminPOS extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_btnPOSActionPerformed
 
+    private void btnLogOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogOutActionPerformed
+        // TODO add your handling code here:
+        Login h = new Login();
+        h.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_btnLogOutActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -1408,6 +1427,7 @@ public class AdminPOS extends javax.swing.JFrame {
     private javax.swing.JButton btnErase;
     private javax.swing.JButton btnHistory;
     private javax.swing.JButton btnInventory;
+    private javax.swing.JButton btnLogOut;
     private javax.swing.JButton btnPAY;
     private javax.swing.JButton btnPOS;
     private javax.swing.JButton btnProducts;

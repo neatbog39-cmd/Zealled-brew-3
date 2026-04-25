@@ -460,7 +460,7 @@
                               </Group>
                           </Group>
                           <EmptySpace min="-2" pref="42" max="-2" attributes="0"/>
-                          <Group type="103" groupAlignment="0" attributes="0">
+                          <Group type="103" groupAlignment="0" max="-2" attributes="0">
                               <Group type="102" attributes="0">
                                   <Group type="103" groupAlignment="0" max="-2" attributes="0">
                                       <Component id="BtnDelete" alignment="0" max="32767" attributes="0"/>
@@ -472,11 +472,11 @@
                                       <Component id="BtnUpdate" min="-2" max="-2" attributes="0"/>
                                   </Group>
                               </Group>
-                              <Component id="cbcat" min="-2" pref="106" max="-2" attributes="0"/>
                               <Group type="102" alignment="0" attributes="0">
                                   <EmptySpace min="-2" pref="17" max="-2" attributes="0"/>
                                   <Component id="BtnReset" min="-2" pref="176" max="-2" attributes="0"/>
                               </Group>
+                              <Component id="cbcat" alignment="0" max="32767" attributes="0"/>
                           </Group>
                           <EmptySpace min="0" pref="208" max="32767" attributes="0"/>
                       </Group>
