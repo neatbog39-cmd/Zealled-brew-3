@@ -992,7 +992,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnSizeActionPerformed(evt);
             }
         });
-        jPanel1.add(btnSize, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 630, -1, -1));
+        jPanel1.add(btnSize, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 630, 120, -1));
 
         btnHistory.setBackground(new java.awt.Color(18, 20, 23));
         btnHistory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1003,7 +1003,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnHistoryActionPerformed(evt);
             }
         });
-        jPanel1.add(btnHistory, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 630, -1, -1));
+        jPanel1.add(btnHistory, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 630, 100, -1));
 
         btnUtilities.setBackground(new java.awt.Color(18, 20, 23));
         btnUtilities.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1036,7 +1036,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnPOSActionPerformed(evt);
             }
         });
-        jPanel1.add(btnPOS, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 680, -1, -1));
+        jPanel1.add(btnPOS, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 680, 100, -1));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
