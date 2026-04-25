@@ -151,6 +151,9 @@ public class Settings extends javax.swing.JFrame {
 
         txtLowStockMax.setText("jTextField4");
 
+        btnSave.setBackground(new java.awt.Color(18, 20, 23));
+        btnSave.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnSave.setForeground(new java.awt.Color(197, 160, 114));
         btnSave.setText("Save");
         btnSave.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -158,6 +161,9 @@ public class Settings extends javax.swing.JFrame {
             }
         });
 
+        btnReset.setBackground(new java.awt.Color(18, 20, 23));
+        btnReset.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnReset.setForeground(new java.awt.Color(197, 160, 114));
         btnReset.setText("Reset");
         btnReset.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -165,6 +171,9 @@ public class Settings extends javax.swing.JFrame {
             }
         });
 
+        btnBack.setBackground(new java.awt.Color(18, 20, 23));
+        btnBack.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnBack.setForeground(new java.awt.Color(197, 160, 114));
         btnBack.setText("Back");
         btnBack.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -229,7 +238,7 @@ public class Settings extends javax.swing.JFrame {
                         .addComponent(btnReset)))
                 .addGap(27, 27, 27)
                 .addComponent(btnBack)
-                .addContainerGap(120, Short.MAX_VALUE))
+                .addContainerGap(104, Short.MAX_VALUE))
         );
 
         pack();

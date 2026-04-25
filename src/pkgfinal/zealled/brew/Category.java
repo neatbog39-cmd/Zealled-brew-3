@@ -428,7 +428,7 @@ public class Category extends javax.swing.JFrame {
         jPanel3.setBackground(new java.awt.Color(40, 40, 40));
         jPanel3.setForeground(new java.awt.Color(40, 40, 40));
 
-        btnDashBoard.setBackground(new java.awt.Color(40, 40, 40));
+        btnDashBoard.setBackground(new java.awt.Color(18, 20, 23));
         btnDashBoard.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnDashBoard.setForeground(new java.awt.Color(197, 160, 114));
         btnDashBoard.setText("Dashboard");
@@ -438,7 +438,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        btnProducts.setBackground(new java.awt.Color(40, 40, 40));
+        btnProducts.setBackground(new java.awt.Color(18, 20, 23));
         btnProducts.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnProducts.setForeground(new java.awt.Color(197, 160, 114));
         btnProducts.setText("Products");
@@ -448,7 +448,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        btnCategory.setBackground(new java.awt.Color(40, 40, 40));
+        btnCategory.setBackground(new java.awt.Color(18, 20, 23));
         btnCategory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnCategory.setForeground(new java.awt.Color(197, 160, 114));
         btnCategory.setText("Category");
@@ -458,7 +458,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        btnAddons.setBackground(new java.awt.Color(40, 40, 40));
+        btnAddons.setBackground(new java.awt.Color(18, 20, 23));
         btnAddons.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnAddons.setForeground(new java.awt.Color(197, 160, 114));
         btnAddons.setText("Addons");
@@ -468,7 +468,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        btnHistory.setBackground(new java.awt.Color(40, 40, 40));
+        btnHistory.setBackground(new java.awt.Color(18, 20, 23));
         btnHistory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnHistory.setForeground(new java.awt.Color(197, 160, 114));
         btnHistory.setText("History");
@@ -478,7 +478,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        btnLogOut.setBackground(new java.awt.Color(40, 40, 40));
+        btnLogOut.setBackground(new java.awt.Color(18, 20, 23));
         btnLogOut.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnLogOut.setForeground(new java.awt.Color(197, 160, 114));
         btnLogOut.setText("Log Out");
@@ -488,7 +488,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        btnUtilities.setBackground(new java.awt.Color(40, 40, 40));
+        btnUtilities.setBackground(new java.awt.Color(18, 20, 23));
         btnUtilities.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnUtilities.setForeground(new java.awt.Color(197, 160, 114));
         btnUtilities.setText("Utilities");
@@ -498,7 +498,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        btnSize.setBackground(new java.awt.Color(40, 40, 40));
+        btnSize.setBackground(new java.awt.Color(18, 20, 23));
         btnSize.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnSize.setForeground(new java.awt.Color(197, 160, 114));
         btnSize.setText("Size");
@@ -510,6 +510,9 @@ public class Category extends javax.swing.JFrame {
 
         jLabel8.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/admin1.1.png"))); // NOI18N
 
+        btnInventory.setBackground(new java.awt.Color(18, 20, 23));
+        btnInventory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnInventory.setForeground(new java.awt.Color(197, 160, 114));
         btnInventory.setText("Inventory");
         btnInventory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -517,6 +520,9 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
+        btnPOS.setBackground(new java.awt.Color(18, 20, 23));
+        btnPOS.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnPOS.setForeground(new java.awt.Color(197, 160, 114));
         btnPOS.setText("POS");
         btnPOS.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -547,13 +553,12 @@ public class Category extends javax.swing.JFrame {
                                 .addComponent(btnCategory, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(btnProducts, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(btnDashBoard, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(btnUtilities, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                .addComponent(btnUtilities, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addComponent(btnPOS))
                         .addGap(17, 17, 17))))
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(btnPOS)
-                    .addComponent(btnInventory))
+                .addComponent(btnInventory)
                 .addGap(33, 33, 33))
         );
         jPanel3Layout.setVerticalGroup(
@@ -583,9 +588,9 @@ public class Category extends javax.swing.JFrame {
                 .addComponent(btnUtilities)
                 .addGap(53, 53, 53)
                 .addComponent(btnInventory)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(35, 35, 35)
                 .addComponent(btnPOS)
-                .addGap(117, 117, 117)
+                .addGap(94, 94, 94)
                 .addComponent(btnLogOut)
                 .addGap(57, 57, 57))
         );
@@ -612,7 +617,7 @@ public class Category extends javax.swing.JFrame {
         txtCategoryInfo.setRows(5);
         jScrollPane2.setViewportView(txtCategoryInfo);
 
-        BTNAdd.setBackground(new java.awt.Color(40, 40, 40));
+        BTNAdd.setBackground(new java.awt.Color(18, 20, 23));
         BTNAdd.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         BTNAdd.setForeground(new java.awt.Color(197, 160, 114));
         BTNAdd.setText("ADD");
@@ -622,7 +627,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        BtnEdit.setBackground(new java.awt.Color(40, 40, 40));
+        BtnEdit.setBackground(new java.awt.Color(18, 20, 23));
         BtnEdit.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         BtnEdit.setForeground(new java.awt.Color(197, 160, 114));
         BtnEdit.setText("EDIT");
@@ -632,7 +637,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        BtnDelete.setBackground(new java.awt.Color(40, 40, 40));
+        BtnDelete.setBackground(new java.awt.Color(18, 20, 23));
         BtnDelete.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         BtnDelete.setForeground(new java.awt.Color(197, 160, 114));
         BtnDelete.setText("DELETE");
@@ -642,7 +647,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        BtnUpdate.setBackground(new java.awt.Color(40, 40, 40));
+        BtnUpdate.setBackground(new java.awt.Color(18, 20, 23));
         BtnUpdate.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         BtnUpdate.setForeground(new java.awt.Color(197, 160, 114));
         BtnUpdate.setText("UPDATE");
@@ -652,7 +657,7 @@ public class Category extends javax.swing.JFrame {
             }
         });
 
-        BtnReset.setBackground(new java.awt.Color(40, 40, 40));
+        BtnReset.setBackground(new java.awt.Color(18, 20, 23));
         BtnReset.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         BtnReset.setForeground(new java.awt.Color(197, 160, 114));
         BtnReset.setText("RESET");

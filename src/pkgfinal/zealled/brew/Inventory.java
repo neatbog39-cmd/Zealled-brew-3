@@ -227,6 +227,7 @@ public class Inventory extends javax.swing.JFrame {
         setBackground(new java.awt.Color(40, 40, 40));
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
+        jTableInventory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         jTableInventory.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null},
@@ -242,6 +243,9 @@ public class Inventory extends javax.swing.JFrame {
 
         getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(375, 226, 710, 250));
 
+        Refreshbtn.setBackground(new java.awt.Color(18, 20, 23));
+        Refreshbtn.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        Refreshbtn.setForeground(new java.awt.Color(197, 160, 114));
         Refreshbtn.setText("Refresh");
         Refreshbtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -250,17 +254,21 @@ public class Inventory extends javax.swing.JFrame {
         });
         getContentPane().add(Refreshbtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(931, 183, -1, -1));
 
+        lblTotalProducts.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         lblTotalProducts.setText("Total Products:");
-        getContentPane().add(lblTotalProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(386, 161, 106, -1));
+        getContentPane().add(lblTotalProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 100, 150, -1));
 
+        lblCriticalLowCount.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         lblCriticalLowCount.setText("Critcal Low:");
-        getContentPane().add(lblCriticalLowCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(498, 161, 109, -1));
+        getContentPane().add(lblCriticalLowCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 100, 109, -1));
 
+        lblLowStockCount.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         lblLowStockCount.setText("Low Stock:");
         getContentPane().add(lblLowStockCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(386, 186, 106, -1));
 
+        lblOutOfStockCount.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         lblOutOfStockCount.setText("Out of Stock:");
-        getContentPane().add(lblOutOfStockCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(498, 186, 175, -1));
+        getContentPane().add(lblOutOfStockCount, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 180, 175, -1));
 
         btnDashBoard.setBackground(new java.awt.Color(18, 20, 23));
         btnDashBoard.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -339,6 +347,9 @@ public class Inventory extends javax.swing.JFrame {
         });
         getContentPane().add(btnUtilities, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 430, -1, -1));
 
+        btnSettings.setBackground(new java.awt.Color(18, 20, 23));
+        btnSettings.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnSettings.setForeground(new java.awt.Color(197, 160, 114));
         btnSettings.setText("Settings");
         btnSettings.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -347,6 +358,9 @@ public class Inventory extends javax.swing.JFrame {
         });
         getContentPane().add(btnSettings, new org.netbeans.lib.awtextra.AbsoluteConstraints(950, 110, -1, -1));
 
+        btnInventory.setBackground(new java.awt.Color(18, 20, 23));
+        btnInventory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnInventory.setForeground(new java.awt.Color(197, 160, 114));
         btnInventory.setText("Inventory");
         btnInventory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -355,6 +369,9 @@ public class Inventory extends javax.swing.JFrame {
         });
         getContentPane().add(btnInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 540, -1, -1));
 
+        btnPOS.setBackground(new java.awt.Color(18, 20, 23));
+        btnPOS.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnPOS.setForeground(new java.awt.Color(197, 160, 114));
         btnPOS.setText("POS");
         btnPOS.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {

@@ -1016,6 +1016,9 @@ public class AdminPOS extends javax.swing.JFrame {
         });
         jPanel1.add(btnUtilities, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 630, -1, -1));
 
+        btnInventory.setBackground(new java.awt.Color(18, 20, 23));
+        btnInventory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnInventory.setForeground(new java.awt.Color(197, 160, 114));
         btnInventory.setText("Inventory");
         btnInventory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1024,6 +1027,9 @@ public class AdminPOS extends javax.swing.JFrame {
         });
         jPanel1.add(btnInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 630, -1, -1));
 
+        btnPOS.setBackground(new java.awt.Color(18, 20, 23));
+        btnPOS.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnPOS.setForeground(new java.awt.Color(197, 160, 114));
         btnPOS.setText("POS");
         btnPOS.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
