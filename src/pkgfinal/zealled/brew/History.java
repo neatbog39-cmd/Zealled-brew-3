@@ -473,7 +473,7 @@ public class History extends javax.swing.JFrame {
         btnHistory.setBackground(new java.awt.Color(18, 20, 23));
         btnHistory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnHistory.setForeground(new java.awt.Color(197, 160, 114));
-        btnHistory.setText("History");
+        btnHistory.setText("Reports");
         btnHistory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnHistoryActionPerformed(evt);
@@ -629,7 +629,7 @@ public class History extends javax.swing.JFrame {
 
         jLabel2.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(197, 160, 114));
-        jLabel2.setText("HISTORY");
+        jLabel2.setText("REPORTS");
 
         dateChooser.setBackground(new java.awt.Color(40, 40, 40));
         dateChooser.setForeground(new java.awt.Color(197, 160, 114));

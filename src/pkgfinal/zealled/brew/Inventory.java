@@ -302,7 +302,7 @@ public class Inventory extends javax.swing.JFrame {
         btnHistory.setBackground(new java.awt.Color(18, 20, 23));
         btnHistory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
         btnHistory.setForeground(new java.awt.Color(197, 160, 114));
-        btnHistory.setText("History");
+        btnHistory.setText("Reports");
         btnHistory.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnHistoryActionPerformed(evt);
