@@ -25,56 +25,57 @@ public class History extends javax.swing.JFrame {
         loadOrders();
     }
     
-    // ========================= TABLE SETUP =========================
-    private void setupHistoryTable(){
-        String[] columns = {
-            "OrderID", "Date", "Type", "Products", "Vatable", "VAT(12%)", "Total", "Cash", "Change", "Cashier"
-        };
+     // ========================= TABLE SETUP =========================
+    private void setupHistoryTable() {
+    String[] columns = {
+        "OrderID", "Date", "Type", "Table #", "Customer", "Products", 
+        "Vatable", "VAT(12%)", "Total", "Cash", "Change", "Cashier"
+    };
 
-        historyModel = new javax.swing.table.DefaultTableModel(columns,0){
-            @Override
-            public boolean isCellEditable(int row, int column){
-                return false;
-            }
-        };
-
-        jTableHistory.setModel(historyModel);
-        
-        javax.swing.table.DefaultTableCellRenderer rightRenderer = 
-            new javax.swing.table.DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
-        
-        for (int i = 4; i <= 8; i++) {
-            jTableHistory.getColumnModel().getColumn(i).setCellRenderer(rightRenderer);
+    historyModel = new javax.swing.table.DefaultTableModel(columns, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
         }
-        
-        jTableHistory.getColumnModel().getColumn(0).setPreferredWidth(60);   // OrderID
-        jTableHistory.getColumnModel().getColumn(1).setPreferredWidth(120);  // Date
-        jTableHistory.getColumnModel().getColumn(2).setPreferredWidth(80);   // Type
-        jTableHistory.getColumnModel().getColumn(3).setPreferredWidth(200);  // Products
-        jTableHistory.getColumnModel().getColumn(7).setPreferredWidth(90);   // Cash
-        jTableHistory.getColumnModel().getColumn(8).setPreferredWidth(90);   // Change
-        jTableHistory.getColumnModel().getColumn(9).setPreferredWidth(120);  // Cashier
+    };
+
+    jTableHistory.setModel(historyModel);
+
+    javax.swing.table.DefaultTableCellRenderer rightRenderer =
+        new javax.swing.table.DefaultTableCellRenderer();
+    rightRenderer.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+
+    for (int i = 6; i <= 10; i++) { // ✅ shifted by 2 for new columns
+        jTableHistory.getColumnModel().getColumn(i).setCellRenderer(rightRenderer);
     }
+
+    jTableHistory.getColumnModel().getColumn(0).setPreferredWidth(60);   // OrderID
+    jTableHistory.getColumnModel().getColumn(1).setPreferredWidth(120);  // Date
+    jTableHistory.getColumnModel().getColumn(2).setPreferredWidth(80);   // Type
+    jTableHistory.getColumnModel().getColumn(3).setPreferredWidth(80);   // Table #
+    jTableHistory.getColumnModel().getColumn(4).setPreferredWidth(120);  // Customer
+    jTableHistory.getColumnModel().getColumn(5).setPreferredWidth(200);  // Products
+    jTableHistory.getColumnModel().getColumn(9).setPreferredWidth(90);   // Cash
+    jTableHistory.getColumnModel().getColumn(10).setPreferredWidth(90);  // Change
+    jTableHistory.getColumnModel().getColumn(11).setPreferredWidth(120); // Cashier
+}
     
     // Add this method after setupHistoryTable()
     private void addDailyTotalsRow(Date selectedDate) {
     if (historyModel.getRowCount() == 0) return;
-    
-    // Calculate totals from table data
+
     double totalVatable = 0, totalVAT = 0, totalAmount = 0, totalCash = 0, totalChange = 0;
-    
+
     for (int i = 0; i < historyModel.getRowCount(); i++) {
-        totalVatable += parseAmount(historyModel.getValueAt(i, 4).toString());
-        totalVAT += parseAmount(historyModel.getValueAt(i, 5).toString());
-        totalAmount += parseAmount(historyModel.getValueAt(i, 6).toString());
-        totalCash += parseAmount(historyModel.getValueAt(i, 7).toString());
-        totalChange += parseAmount(historyModel.getValueAt(i, 8).toString());
+        totalVatable += parseAmount(historyModel.getValueAt(i, 6).toString());  // ✅ shifted
+        totalVAT     += parseAmount(historyModel.getValueAt(i, 7).toString());
+        totalAmount  += parseAmount(historyModel.getValueAt(i, 8).toString());
+        totalCash    += parseAmount(historyModel.getValueAt(i, 9).toString());
+        totalChange  += parseAmount(historyModel.getValueAt(i, 10).toString());
     }
-    
-    // Create bold total row with special marker
+
     Object[] totalRow = {
-        "🔢TOTAL", "", "", "",  // Use special prefix to identify
+        "🔢TOTAL", "", "", "", "", "",
         String.format("₱%.2f", totalVatable),
         String.format("₱%.2f", totalVAT),
         String.format("₱%.2f", totalAmount),
@@ -82,7 +83,7 @@ public class History extends javax.swing.JFrame {
         String.format("₱%.2f", totalChange),
         String.format("** %d Orders **", historyModel.getRowCount())
     };
-    
+
     historyModel.addRow(totalRow);
 }
 
@@ -113,97 +114,100 @@ public class History extends javax.swing.JFrame {
 
     // ========================= FILTERED SEARCH =========================
     private void filteredSearch(String searchTerm, Date selectedDate) {
-        historyModel.setRowCount(0);
+    historyModel.setRowCount(0);
 
-        StringBuilder sql = new StringBuilder("""
-            SELECT DISTINCT o.OrderID, o.OrderDate, o.OrderType, 
-                   GROUP_CONCAT(p.Name SEPARATOR ', ') AS Products,
-                   SUM(od.Subtotal) AS OrderSubtotal,
-                   o.TotalAmount, o.`Cash`, o.`Change`
-            FROM orders o 
-            JOIN order_details od ON o.OrderID = od.OrderID 
-            JOIN products p ON od.ProductID = p.ProductID 
-            LEFT JOIN users u ON o.UserID = u.id
-            WHERE 1=1
-            """);
+    StringBuilder sql = new StringBuilder("""
+        SELECT DISTINCT o.OrderID, o.OrderDate, o.OrderType,
+               COALESCE(o.TableNumber, '—') AS TableNumber,
+               COALESCE(o.CustomerName, '—') AS CustomerName,
+               GROUP_CONCAT(p.Name SEPARATOR ', ') AS Products,
+               SUM(od.Subtotal) AS OrderSubtotal,
+               o.TotalAmount, o.`Cash`, o.`Change`
+        FROM orders o 
+        JOIN order_details od ON o.OrderID = od.OrderID 
+        JOIN products p ON od.ProductID = p.ProductID 
+        LEFT JOIN users u ON o.UserID = u.id
+        WHERE 1=1
+        """);
 
-        try (Connection con = ConnectorXampp.connect()) {
-            
-            // Date filter
+    try (Connection con = ConnectorXampp.connect()) {
+
+        if (selectedDate != null) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            sql.append(" AND DATE(o.OrderDate) = ?");
+        }
+
+        if (!searchTerm.isEmpty()) {
+            sql.append(" AND (o.OrderID LIKE ? ");
+            sql.append("OR o.OrderDate LIKE ? ");
+            sql.append("OR o.OrderType LIKE ? ");
+            sql.append("OR o.TableNumber LIKE ? ");    // ✅ NEW
+            sql.append("OR o.CustomerName LIKE ? ");   // ✅ NEW
+            sql.append("OR p.Name LIKE ? ");
+            sql.append("OR u.full_name LIKE ?)");
+        }
+
+        sql.append(" GROUP BY o.OrderID ORDER BY o.OrderID DESC LIMIT 100");
+
+        try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
+            int paramIndex = 1;
+
             if (selectedDate != null) {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-                String dateStr = dateFormat.format(selectedDate);
-                sql.append(" AND DATE(o.OrderDate) = ?");
+                ps.setString(paramIndex++, dateFormat.format(selectedDate));
             }
-            
-            // Search term filter
+
             if (!searchTerm.isEmpty()) {
-                sql.append(" AND (o.OrderID LIKE ? ");
-                sql.append("OR o.OrderDate LIKE ? ");
-                sql.append("OR o.OrderType LIKE ? ");
-                sql.append("OR p.Name LIKE ? ");
-                sql.append("OR u.full_name LIKE ?)");
-            }
-            
-            sql.append(" GROUP BY o.OrderID ORDER BY o.OrderID DESC LIMIT 100");
-
-            try (PreparedStatement ps = con.prepareStatement(sql.toString())) {
-                int paramIndex = 1;
-                
-                // Set date parameter first
-                if (selectedDate != null) {
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-                    ps.setString(paramIndex++, dateFormat.format(selectedDate));
-                }
-                
-                // Set search parameters
-                if (!searchTerm.isEmpty()) {
-                    String searchPattern = "%" + searchTerm + "%";
-                    for (int i = 0; i < 5; i++) {
-                        ps.setString(paramIndex++, searchPattern);
-                    }
-                }
-                
-                ResultSet rs = ps.executeQuery();
-
-                while (rs.next()) {
-                    double subtotal = rs.getDouble("OrderSubtotal");
-                    double vatable = subtotal / 1.12;
-                    double vat = vatable * 0.12;
-                    double total = rs.getDouble("TotalAmount");
-                    double cash = rs.getDouble("Cash");
-                    double change = rs.getDouble("Change");
-                    
-                    String cashierName = getCashierNameForOrder(rs.getInt("OrderID"));
-                    
-                    historyModel.addRow(new Object[]{
-                        rs.getInt("OrderID"),
-                        rs.getString("OrderDate").substring(0, 16),
-                        rs.getString("OrderType"),
-                        rs.getString("Products"),
-                        String.format("₱%.2f", vatable),
-                        String.format("₱%.2f", vat),
-                        String.format("₱%.2f", total),
-                        String.format("₱%.2f", cash),
-                        String.format("₱%.2f", change),
-                        cashierName
-                    });
+                String searchPattern = "%" + searchTerm + "%";
+                for (int i = 0; i < 7; i++) { // ✅ 7 params now instead of 5
+                    ps.setString(paramIndex++, searchPattern);
                 }
             }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "❌ Filter Error: " + e.getMessage());
-            e.printStackTrace();
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                double subtotal = rs.getDouble("OrderSubtotal");
+                double vatable = subtotal / 1.12;
+                double vat = vatable * 0.12;
+                double total = rs.getDouble("TotalAmount");
+                double cash = rs.getDouble("Cash");
+                double change = rs.getDouble("Change");
+
+                String cashierName = getCashierNameForOrder(rs.getInt("OrderID"));
+
+                historyModel.addRow(new Object[]{
+                    rs.getInt("OrderID"),
+                    rs.getString("OrderDate").substring(0, 16),
+                    rs.getString("OrderType"),
+                    rs.getString("TableNumber"),   // ✅ NEW
+                    rs.getString("CustomerName"),  // ✅ NEW
+                    rs.getString("Products"),
+                    String.format("₱%.2f", vatable),
+                    String.format("₱%.2f", vat),
+                    String.format("₱%.2f", total),
+                    String.format("₱%.2f", cash),
+                    String.format("₱%.2f", change),
+                    cashierName
+                });
+            }
         }
-        
-        addDailyTotalsRow(selectedDate);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "❌ Filter Error: " + e.getMessage());
+        e.printStackTrace();
     }
+
+    addDailyTotalsRow(selectedDate);
+}
     
     // ========================= LOAD ALL ORDERS =========================
     private void loadAllOrders() {
-        historyModel.setRowCount(0);
+    historyModel.setRowCount(0);
 
-        String sql = """
+    String sql = """
         SELECT o.OrderID, o.OrderDate, o.OrderType, 
+               COALESCE(o.TableNumber, '—') AS TableNumber,
+               COALESCE(o.CustomerName, '—') AS CustomerName,
                COALESCE(GROUP_CONCAT(COALESCE(p.Name, 'DELETED') SEPARATOR ', '), 'EMPTY') AS Products,
                COALESCE(SUM(od.Subtotal), 0) AS OrderSubtotal,
                o.TotalAmount, o.`Cash`, o.`Change`
@@ -214,39 +218,41 @@ public class History extends javax.swing.JFrame {
         ORDER BY o.OrderID DESC LIMIT 100
         """;
 
-        try (Connection con = ConnectorXampp.connect();
-             Statement st = con.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+    try (Connection con = ConnectorXampp.connect();
+         Statement st = con.createStatement();
+         ResultSet rs = st.executeQuery(sql)) {
 
-            while (rs.next()) {
-                double subtotal = rs.getDouble("OrderSubtotal");
-                double vatable = subtotal / 1.12;
-                double vat = vatable * 0.12;
-                double total = rs.getDouble("TotalAmount");
-                double cash = rs.getDouble("Cash");
-                double change = rs.getDouble("Change");
-                
-                String cashierName = getCashierNameForOrder(rs.getInt("OrderID"));
-                
-                historyModel.addRow(new Object[]{
-                    rs.getInt("OrderID"),
-                    rs.getString("OrderDate").substring(0, 16),
-                    rs.getString("OrderType"),
-                    rs.getString("Products"),
-                    String.format("₱%.2f", vatable),
-                    String.format("₱%.2f", vat),
-                    String.format("₱%.2f", total),
-                    String.format("₱%.2f", cash),
-                    String.format("₱%.2f", change),
-                    cashierName
-                });
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "❌ Database Error: " + e.getMessage());
-            e.printStackTrace();
+        while (rs.next()) {
+            double subtotal = rs.getDouble("OrderSubtotal");
+            double vatable = subtotal / 1.12;
+            double vat = vatable * 0.12;
+            double total = rs.getDouble("TotalAmount");
+            double cash = rs.getDouble("Cash");
+            double change = rs.getDouble("Change");
+
+            String cashierName = getCashierNameForOrder(rs.getInt("OrderID"));
+
+            historyModel.addRow(new Object[]{
+                rs.getInt("OrderID"),
+                rs.getString("OrderDate").substring(0, 16),
+                rs.getString("OrderType"),
+                rs.getString("TableNumber"),   // ✅ NEW
+                rs.getString("CustomerName"),  // ✅ NEW
+                rs.getString("Products"),
+                String.format("₱%.2f", vatable),
+                String.format("₱%.2f", vat),
+                String.format("₱%.2f", total),
+                String.format("₱%.2f", cash),
+                String.format("₱%.2f", change),
+                cashierName
+            });
         }
-        addDailyTotalsRow(null);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "❌ Database Error: " + e.getMessage());
+        e.printStackTrace();
     }
+    addDailyTotalsRow(null);
+}
 
     // ========================= RECEIPT DETAILS =========================
     private void showOrderDetails(int orderId){
@@ -257,7 +263,8 @@ public class History extends javax.swing.JFrame {
         // HEADER
         String headerSql = """
             SELECT o.OrderDate, o.OrderType, o.TotalAmount, o.Cash, o.`Change`,
-                   u.full_name AS CashierName 
+           o.TableNumber, o.CustomerName,
+           u.full_name AS CashierName 
             FROM orders o 
             LEFT JOIN users u ON o.UserID = u.id 
             WHERE o.OrderID = ?
@@ -274,10 +281,12 @@ public class History extends javax.swing.JFrame {
                 String cashierName = headerRs.getString("CashierName");
                 
                 receipt.append("☕ ZEALLED BREWS ☕\n")
-                       .append("============================\n")
-                       .append("Cashier: ").append(cashierName != null ? cashierName : "Cashier").append("\n")
-                       .append("Date: ").append(orderDateTime).append("\n")
-                       .append("Type: ").append(orderType).append("\n\n");
+                        .append("============================\n")
+                        .append("Cashier:  ").append(cashierName != null ? cashierName : "Cashier").append("\n")
+                        .append("Date:     ").append(orderDateTime).append("\n")
+                        .append("Type:     ").append(orderType).append("\n")
+                        .append("Table #:  ").append(headerRs.getString("TableNumber") != null ? headerRs.getString("TableNumber") : "—").append("\n")  // ✅ NEW
+                        .append("Customer: ").append(headerRs.getString("CustomerName") != null ? headerRs.getString("CustomerName") : "—").append("\n\n"); // ✅ NEW
             }
         }
 
@@ -388,7 +397,6 @@ public class History extends javax.swing.JFrame {
     
    
   
-
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

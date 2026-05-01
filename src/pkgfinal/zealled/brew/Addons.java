@@ -49,170 +49,184 @@ public class Addons extends javax.swing.JFrame {
     
     // ========================= TABLE DATA LOADERS =========================
     private void loadTableData() {
-    try {
-        String sql = "SELECT * FROM addons ORDER BY Name ASC";
-        try (Connection con = ConnectorXampp.connect();
-             PreparedStatement pst = con.prepareStatement(sql)) {
+        try {
+            String sql = "SELECT * FROM addons ORDER BY Name ASC";
+            try (Connection con = ConnectorXampp.connect();
+                 PreparedStatement pst = con.prepareStatement(sql)) {
 
-            rs = pst.executeQuery();
-            DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
-            model.setColumnCount(0);  // Clear columns first
-            model.addColumn("ID");
-            model.addColumn("Name");
-            model.addColumn("Price");
-            model.setRowCount(0);
+                rs = pst.executeQuery();
+                DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+                model.setColumnCount(0);
+                model.addColumn("ID");
+                model.addColumn("Name");
+                model.addColumn("Price");
+                model.setRowCount(0);
 
-            while (rs.next()) {
-                double priceValue = rs.getDouble("Price");
-                String formattedPrice = String.format("₱%.2f", priceValue);
-                Object[] row = {rs.getInt("AddonID"), rs.getString("Name"), formattedPrice};
-                model.addRow(row);
+                while (rs.next()) {
+                    double priceValue = rs.getDouble("Price");
+                    String formattedPrice = String.format("₱%.2f", priceValue);
+                    Object[] row = {rs.getInt("AddonID"), rs.getString("Name"), formattedPrice};
+                    model.addRow(row);
+                }
             }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error loading data: " + e.getMessage());
         }
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error loading data: " + e.getMessage());
     }
-}
     
     private void loadTableData(String search) {
-    try {
-        String sql = "SELECT * FROM addons WHERE name LIKE ? ORDER BY Name ASC";
-        try (Connection con = ConnectorXampp.connect();
-             PreparedStatement pst = con.prepareStatement(sql)) {
+        try {
+            String sql = "SELECT * FROM addons WHERE name LIKE ? ORDER BY Name ASC";
+            try (Connection con = ConnectorXampp.connect();
+                 PreparedStatement pst = con.prepareStatement(sql)) {
 
-            pst.setString(1, "%" + search + "%");
-            rs = pst.executeQuery();
-            DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
-            model.setColumnCount(0);  // Clear columns first
-            model.addColumn("ID");
-            model.addColumn("Name");
-            model.addColumn("Price");
-            model.setRowCount(0);
+                pst.setString(1, "%" + search + "%");
+                rs = pst.executeQuery();
+                DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+                model.setColumnCount(0);
+                model.addColumn("ID");
+                model.addColumn("Name");
+                model.addColumn("Price");
+                model.setRowCount(0);
 
-            while (rs.next()) {
-                double priceValue = rs.getDouble("Price");
-                String formattedPrice = String.format("₱%.2f", priceValue);
-                Object[] row = {rs.getInt("AddonID"), rs.getString("name"), formattedPrice};
-                model.addRow(row);
+                while (rs.next()) {
+                    double priceValue = rs.getDouble("Price");
+                    String formattedPrice = String.format("₱%.2f", priceValue);
+                    Object[] row = {rs.getInt("AddonID"), rs.getString("name"), formattedPrice};
+                    model.addRow(row);
+                }
             }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error searching: " + e.getMessage());
         }
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error searching: " + e.getMessage());
     }
-}
 
      // ========================= CRUD OPERATIONS  =========================
     private void addAddon() {
-    String name = txtAddonName.getText().trim();
-    String price = txtAddonPrice.getText().trim();
+        String name = txtAddonName.getText().trim();
+        String price = txtAddonPrice.getText().trim();
 
-    if (name.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Addon Name is Required");
-        return;
-    }
-    if (price.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Price is Required");
-        return;
-    }
-
-    // Check for duplicate name
-    if (isAddonNameExists(name)) {
-        JOptionPane.showMessageDialog(this, "❌ Addon '" + name + "' already exists!");
-        return;
-    }
-
-    try {
-        String sql = "INSERT INTO addons (Name, Price) VALUES (?, ?)";
-        try (Connection con = ConnectorXampp.connect();
-             PreparedStatement pst = con.prepareStatement(sql)) {
-
-            pst.setString(1, name);
-            pst.setString(2, price);
-            pst.executeUpdate();
-
-            JOptionPane.showMessageDialog(this, "✅ Addon Added Successfully!");
-            loadTableData();
-            
-            // 🔥 DISABLE FIELDS AFTER ADDING
-            clearFields();
-            setFieldsEnabled(false);  // 🔥 ADD THIS LINE
-            resetButtons();           // 🔥 ADD THIS LINE
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Addon Name is Required");
+            return;
         }
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error adding addon: " + e.getMessage());
+        if (price.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Price is Required");
+            return;
+        }
+
+        // Validate price format
+        double priceValue;
+        try {
+            priceValue = Double.parseDouble(price);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "❌ Invalid price format. Use numbers like 12.50");
+            return;
+        }
+
+        // Check for duplicate name
+        if (isAddonNameExists(name)) {
+            JOptionPane.showMessageDialog(this, "❌ Addon '" + name + "' already exists!");
+            return;
+        }
+
+        try {
+            String sql = "INSERT INTO addons (Name, Price) VALUES (?, ?)";
+            try (Connection con = ConnectorXampp.connect();
+                 PreparedStatement pst = con.prepareStatement(sql)) {
+
+                pst.setString(1, name);
+                pst.setDouble(2, priceValue);
+                pst.executeUpdate();
+
+                JOptionPane.showMessageDialog(this, "✅ Addon Added Successfully!");
+                loadTableData();
+                clearFields();
+                setFieldsEnabled(false);
+                resetButtons();
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error adding addon: " + e.getMessage());
+        }
     }
-}
 
     private void updateAddon() {
-    if (editingAddonId == -1) {
-        JOptionPane.showMessageDialog(this, "No addon selected to update");
-        return;
-    }
-
-    String name = txtAddonName.getText().trim();
-    String price = txtAddonPrice.getText().trim();
-
-    if (name.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Addon Name is Required");
-        return;
-    }
-    if (price.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Price is Required");
-        return;
-    }
-
-    // Get current name before update for duplicate check
-    String currentName = "";
-    try {
-        String sqlCheck = "SELECT Name FROM addons WHERE AddonID = ?";
-        try (Connection con = ConnectorXampp.connect();
-             PreparedStatement pstCheck = con.prepareStatement(sqlCheck)) {
-            pstCheck.setInt(1, editingAddonId);
-            ResultSet rsCheck = pstCheck.executeQuery();
-            if (rsCheck.next()) {
-                currentName = rsCheck.getString("Name");
-            }
+        if (editingAddonId == -1) {
+            JOptionPane.showMessageDialog(this, "No addon selected to update");
+            return;
         }
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error checking current name: " + e.getMessage());
-        return;
-    }
 
-    // Check for duplicate (exclude current addon)
-    if (!name.equals(currentName) && isAddonNameExists(name)) {
-        JOptionPane.showMessageDialog(this, "❌ Addon '" + name + "' already exists!");
-        return;
-    }
+        String name = txtAddonName.getText().trim();
+        String price = txtAddonPrice.getText().trim();
 
-    try {
-        String sql = "UPDATE addons SET Name = ?, Price = ? WHERE AddonID = ?";
-        try (Connection con = ConnectorXampp.connect();
-             PreparedStatement pst = con.prepareStatement(sql)) {
-
-            pst.setString(1, name);
-            pst.setString(2, price);
-            pst.setInt(3, editingAddonId);
-            int rowsAffected = pst.executeUpdate();
-
-            if (rowsAffected > 0) {
-                JOptionPane.showMessageDialog(this, "✅ Addon Updated Successfully!");
-            } else {
-                JOptionPane.showMessageDialog(this, "⚠️ No changes made or addon not found");
-            }
-            
-            // 🔥 AFTER UPDATE: DISABLE FIELDS + RESET
-            loadTableData();
-            clearFields();
-            setFieldsEnabled(false);     // 🔥 DISABLE TEXT FIELDS
-            editingAddonId = -1;
-            resetButtons();              // 🔥 RESET BUTTONS
-            
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Addon Name is Required");
+            return;
         }
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error updating addon: " + e.getMessage());
-        e.printStackTrace();
+        if (price.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Price is Required");
+            return;
+        }
+
+        // Validate price format
+        double priceValue;
+        try {
+            priceValue = Double.parseDouble(price);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "❌ Invalid price format. Use numbers like 12.50");
+            return;
+        }
+
+        // Get current name before update for duplicate check
+        String currentName = "";
+        try {
+            String sqlCheck = "SELECT Name FROM addons WHERE AddonID = ?";
+            try (Connection con = ConnectorXampp.connect();
+                 PreparedStatement pstCheck = con.prepareStatement(sqlCheck)) {
+                pstCheck.setInt(1, editingAddonId);
+                ResultSet rsCheck = pstCheck.executeQuery();
+                if (rsCheck.next()) {
+                    currentName = rsCheck.getString("Name");
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error checking current name: " + e.getMessage());
+            return;
+        }
+
+        // Check for duplicate (exclude current addon)
+        if (!name.equals(currentName) && isAddonNameExists(name)) {
+            JOptionPane.showMessageDialog(this, "❌ Addon '" + name + "' already exists!");
+            return;
+        }
+
+        try {
+            String sql = "UPDATE addons SET Name = ?, Price = ? WHERE AddonID = ?";
+            try (Connection con = ConnectorXampp.connect();
+                 PreparedStatement pst = con.prepareStatement(sql)) {
+
+                pst.setString(1, name);
+                pst.setDouble(2, priceValue);
+                pst.setInt(3, editingAddonId);
+                int rowsAffected = pst.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    JOptionPane.showMessageDialog(this, "✅ Addon Updated Successfully!");
+                } else {
+                    JOptionPane.showMessageDialog(this, "⚠️ No changes made or addon not found");
+                }
+
+                loadTableData();
+                clearFields();
+                setFieldsEnabled(false);
+                editingAddonId = -1;
+                resetButtons();
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error updating addon: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
-}
     
     private void deleteAddon() {
         int selectedRow = jTable1.getSelectedRow();
@@ -221,7 +235,6 @@ public class Addons extends javax.swing.JFrame {
             return;
         }
 
-        // Get ID from the first column
         int id = (int) jTable1.getValueAt(selectedRow, 0);
         
         int confirm = JOptionPane.showConfirmDialog(this, 
@@ -241,7 +254,6 @@ public class Addons extends javax.swing.JFrame {
                     JOptionPane.showMessageDialog(this, "Addon Deleted Successfully");
                     loadTableData();
                     resetButtons();
-
                 }
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, "Error deleting addon: " + e.getMessage());
@@ -271,21 +283,21 @@ public class Addons extends javax.swing.JFrame {
     
      // ========================= VALIDATION  =========================
     private boolean isAddonNameExists(String addonName) {
-    try {
-        String sql = "SELECT COUNT(*) FROM addons WHERE Name = ?";
-        try (Connection con = ConnectorXampp.connect();
-             PreparedStatement pst = con.prepareStatement(sql)) {
-            
-            pst.setString(1, addonName);
-            ResultSet rs = pst.executeQuery();
-            rs.next();
-            return rs.getInt(1) > 0;
+        try {
+            String sql = "SELECT COUNT(*) FROM addons WHERE Name = ?";
+            try (Connection con = ConnectorXampp.connect();
+                 PreparedStatement pst = con.prepareStatement(sql)) {
+                
+                pst.setString(1, addonName);
+                ResultSet rs = pst.executeQuery();
+                rs.next();
+                return rs.getInt(1) > 0;
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error checking duplicate: " + e.getMessage());
+            return false;
         }
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Error checking duplicate: " + e.getMessage());
-        return false;
     }
-}
     
     
     
@@ -746,35 +758,31 @@ public class Addons extends javax.swing.JFrame {
 
     private void BtnEditActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnEditActionPerformed
         // TODO add your handling code here:
-         int selectedRow = jTable1.getSelectedRow();
-    if (selectedRow == -1) {
-        JOptionPane.showMessageDialog(this, "Please select an addon to edit");
-        return;
-    }
+        int selectedRow = jTable1.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select an addon to edit");
+            return;
+        }
 
-   
-    editingAddonId = (int) jTable1.getValueAt(selectedRow, 0);
-    
-    // Populate fields
-    String name = (String) jTable1.getValueAt(selectedRow, 1);
-    
-    
-    String priceWithSymbol = (String) jTable1.getValueAt(selectedRow, 2);
-    String cleanPrice = priceWithSymbol
-        .replace("₱", "")          
-        .replace(".00", "")         
-        .trim();
-    
-    txtAddonName.setText(name);
-    txtAddonPrice.setText(cleanPrice);  
+        editingAddonId = (int) jTable1.getValueAt(selectedRow, 0);
+        
+        String name = (String) jTable1.getValueAt(selectedRow, 1);
+        
+        // ✅ FIXED: Only strip the ₱ symbol, keep full decimal value
+        String priceWithSymbol = (String) jTable1.getValueAt(selectedRow, 2);
+        String cleanPrice = priceWithSymbol
+            .replace("₱", "")
+            .trim();
+        
+        txtAddonName.setText(name);
+        txtAddonPrice.setText(cleanPrice);
 
-    
-    setFieldsEnabled(true);
-    BtnUpdate.setEnabled(true);
-    BtnReset.setEnabled(true);
-    BtnEdit.setEnabled(false);
-    BTNAdd.setEnabled(false);
-    BtnDelete.setEnabled(false);
+        setFieldsEnabled(true);
+        BtnUpdate.setEnabled(true);
+        BtnReset.setEnabled(true);
+        BtnEdit.setEnabled(false);
+        BTNAdd.setEnabled(false);
+        BtnDelete.setEnabled(false);
     }//GEN-LAST:event_BtnEditActionPerformed
 
     private void BtnDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BtnDeleteActionPerformed

@@ -101,56 +101,60 @@ public class Category extends javax.swing.JFrame {
     }
     
     private void formatProductsTable() {
-        // Price column formatter
-        java.text.NumberFormat currencyFormat = new java.text.DecimalFormat("₱#,##0");
-        javax.swing.table.TableCellRenderer priceRenderer = (table, value, isSelected, hasFocus, row, column) -> {
-            javax.swing.JLabel label = new javax.swing.JLabel();
-            if (value != null && value instanceof Integer) {
-                double price = (Integer) value;
+    // Price column formatter
+    java.text.NumberFormat currencyFormat = new java.text.DecimalFormat("₱#,##0.00"); // ✅ added .00
+    javax.swing.table.TableCellRenderer priceRenderer = (table, value, isSelected, hasFocus, row, column) -> {
+        javax.swing.JLabel label = new javax.swing.JLabel();
+        if (value != null) {                                    // ✅ FIXED
+            try {
+                double price = Double.parseDouble(value.toString());
                 label.setText(currencyFormat.format(price));
-            } else {
-                label.setText(value != null ? value.toString() : "₱0");
+            } catch (Exception ex) {
+                label.setText("₱0.00");
             }
-            label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-            label.setOpaque(true);
-            if (isSelected) {
-                label.setBackground(table.getSelectionBackground());
-                label.setForeground(table.getSelectionForeground());
-            } else {
-                label.setBackground(table.getBackground());
-                label.setForeground(table.getForeground());
+        } else {
+            label.setText("₱0.00");                            // ✅ FIXED
+        }
+        label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        label.setOpaque(true);
+        if (isSelected) {
+            label.setBackground(table.getSelectionBackground());
+            label.setForeground(table.getSelectionForeground());
+        } else {
+            label.setBackground(table.getBackground());
+            label.setForeground(table.getForeground());
+        }
+        return label;
+    };
+    jTable2.getColumnModel().getColumn(2).setCellRenderer(priceRenderer);
+
+    // Quantity column formatter — NO CHANGES
+    javax.swing.table.TableCellRenderer quantityRenderer = (table, value, isSelected, hasFocus, row, column) -> {
+        javax.swing.JLabel label = new javax.swing.JLabel();
+        if (value != null && value instanceof Integer) {
+            int qty = (Integer) value;
+            label.setText(qty == 0 ? "Out of Stock" : String.valueOf(qty));
+            if (qty == 0) {
+                label.setForeground(java.awt.Color.RED);
+            } else if (qty < 10) {
+                label.setForeground(java.awt.Color.ORANGE);
             }
-            return label;
-        };
-        jTable2.getColumnModel().getColumn(2).setCellRenderer(priceRenderer);
-        
-        // Quantity column formatter
-        javax.swing.table.TableCellRenderer quantityRenderer = (table, value, isSelected, hasFocus, row, column) -> {
-            javax.swing.JLabel label = new javax.swing.JLabel();
-            if (value != null && value instanceof Integer) {
-                int qty = (Integer) value;
-                label.setText(qty == 0 ? "Out of Stock" : String.valueOf(qty));
-                if (qty == 0) {
-                    label.setForeground(java.awt.Color.RED);
-                } else if (qty < 10) {
-                    label.setForeground(java.awt.Color.ORANGE);
-                }
-            } else {
-                label.setText(value != null ? value.toString() : "0");
-            }
-            label.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-            label.setOpaque(true);
-            if (isSelected) {
-                label.setBackground(table.getSelectionBackground());
-                label.setForeground(table.getSelectionForeground());
-            } else {
-                label.setBackground(table.getBackground());
-                label.setForeground(table.getForeground());
-            }
-            return label;
-        };
-        jTable2.getColumnModel().getColumn(3).setCellRenderer(quantityRenderer);
-    }
+        } else {
+            label.setText(value != null ? value.toString() : "0");
+        }
+        label.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        label.setOpaque(true);
+        if (isSelected) {
+            label.setBackground(table.getSelectionBackground());
+            label.setForeground(table.getSelectionForeground());
+        } else {
+            label.setBackground(table.getBackground());
+            label.setForeground(table.getForeground());
+        }
+        return label;
+    };
+    jTable2.getColumnModel().getColumn(3).setCellRenderer(quantityRenderer);
+}
     
     // ========================= LOAD PRODUCTS FOR SELECTED CATEGORY =========================
     private void loadProductsForSelectedCategory() {
@@ -172,7 +176,7 @@ public class Category extends javax.swing.JFrame {
                 model.addRow(new Object[]{
                     rs.getString("Name"),
                     rs.getString("Size"),
-                    rs.getInt("Price"),
+                    rs.getDouble("Price"),
                     rs.getInt("Quantity")
                 });
             }

@@ -49,7 +49,7 @@ public class AdminPOS extends javax.swing.JFrame {
     }
     
     
-    // ========================= TABLE & UI SETUP =========================
+   // ========================= TABLE & UI SETUP =========================
     // Products
     private void setupModels() {
     // MATCH Products form EXACTLY
@@ -82,16 +82,19 @@ public class AdminPOS extends javax.swing.JFrame {
 }
     // Color
     private void formatPOSTableDisplay() {
-    
     java.text.NumberFormat currencyFormat = new java.text.DecimalFormat("₱#,##0.00");
     javax.swing.table.TableCellRenderer priceRenderer = (javax.swing.JTable table, Object value,
         boolean isSelected, boolean hasFocus, int row, int column) -> {
         javax.swing.JLabel label = new javax.swing.JLabel();
-        if (value != null && value instanceof Integer) {
-            double price = (Integer) value;
-            label.setText(currencyFormat.format(price));
+        if (value != null) {
+            try {
+                double price = Double.parseDouble(value.toString()); // ✅ works for both Integer and Double
+                label.setText(currencyFormat.format(price));
+            } catch (Exception ex) {
+                label.setText("₱0.00");
+            }
         } else {
-            label.setText(value != null ? value.toString() : "₱0.00");
+            label.setText("₱0.00");
         }
         label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         if (isSelected) {
@@ -105,8 +108,8 @@ public class AdminPOS extends javax.swing.JFrame {
         return label;
     };
     jTableProducts.getColumnModel().getColumn(4).setCellRenderer(priceRenderer);
-    
-    
+
+    // Quantity renderer — NO CHANGES NEEDED HERE
     javax.swing.table.TableCellRenderer quantityRenderer = (javax.swing.JTable table, Object value, 
         boolean isSelected, boolean hasFocus, int row, int column) -> {
         javax.swing.JLabel label = new javax.swing.JLabel();
@@ -114,7 +117,7 @@ public class AdminPOS extends javax.swing.JFrame {
             int qty = (Integer) value;
             label.setText(qty == 0 ? "Out of Stock" : String.valueOf(qty));
             if (qty == 0) label.setForeground(java.awt.Color.RED);
-            else if (qty <= 5) label.setForeground(java.awt.Color.ORANGE); // Critically low
+            else if (qty <= 5) label.setForeground(java.awt.Color.ORANGE);
         } else {
             label.setText(value != null ? value.toString() : "0");
         }
@@ -183,7 +186,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 rs.getString("Name"), 
                 rs.getString("category_name"),
                 rs.getString("Size"), 
-                rs.getInt("Price"),   
+                rs.getDouble("Price"),   
                 rs.getInt("Quantity")    
             });
         }
@@ -212,7 +215,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 rs.getString("Name"), 
                 rs.getString("category_name"),
                 rs.getString("Size"), 
-                rs.getInt("Price"),      
+                rs.getDouble("Price"),      
                 rs.getInt("Quantity")    
             });
         }
@@ -299,7 +302,7 @@ public class AdminPOS extends javax.swing.JFrame {
          PreparedStatement ps = con.prepareStatement("SELECT Price FROM products WHERE ProductID = ?")) {
         ps.setInt(1, productId);
         ResultSet rs = ps.executeQuery();
-        if (rs.next()) return rs.getInt("Price");  
+        if (rs.next()) return rs.getDouble("Price");  
     } catch (Exception e) {
         System.out.println("Base price error: " + e.getMessage());
     }
@@ -590,8 +593,6 @@ public class AdminPOS extends javax.swing.JFrame {
         ((Timer)e.getSource()).stop();
     }).start();
 }
-   
-   
    
    
   
@@ -945,7 +946,7 @@ public class AdminPOS extends javax.swing.JFrame {
         ));
         jScrollPane4.setViewportView(jTableAddons);
 
-        jPanel1.add(jScrollPane4, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 370, 570, 510));
+        jPanel1.add(jScrollPane4, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 700, 570, 180));
 
         btnDashBoard.setBackground(new java.awt.Color(18, 20, 23));
         btnDashBoard.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1146,13 +1147,13 @@ public class AdminPOS extends javax.swing.JFrame {
 
     private void jTableProductsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTableProductsMouseClicked
         // TODO add your handling code here:
-     int row = jTableProducts.getSelectedRow();
+      int row = jTableProducts.getSelectedRow();
     if (row < 0) return;
     
     int id = (Integer) jTableProducts.getValueAt(row, 0);
     String name = jTableProducts.getValueAt(row, 1).toString();
     String size = jTableProducts.getValueAt(row, 3).toString();
-    int price = (Integer) jTableProducts.getValueAt(row, 4); 
+    double price = ((Number) jTableProducts.getValueAt(row, 4)).doubleValue(); // ✅ FIXED
     int stock = (Integer) jTableProducts.getValueAt(row, 5);
     
     if (stock <= 0) {
@@ -1163,12 +1164,11 @@ public class AdminPOS extends javax.swing.JFrame {
     String addon = (String) cmbAddons.getSelectedItem();
     double addonPrice = getAddonPrice(addon);  
     
-    
     System.out.println("🧾 DEBUG - Base: ₱" + price + ", Addon: '" + addon + "' = ₱" + addonPrice);
     
     String qtyText = JOptionPane.showInputDialog(
         this, 
-        "🍵 " + name + "\n📏 Size: " + size + "\n💰 Price: ₱" + price + 
+        "🍵 " + name + "\n📏 Size: " + size + "\n💰 Price: ₱" + String.format("%.2f", price) + // ✅ formatted
         (addon.equals("None") ? "" : "\n➕ " + addon + ": ₱" + String.format("%.2f", addonPrice)) + 
         "\n📦 Stock: " + stock + "\n\nEnter Quantity:"
     );
@@ -1184,8 +1184,7 @@ public class AdminPOS extends javax.swing.JFrame {
         
         String itemKey = "ID_" + id;
         String displayName = name + " (" + size + ")" + (addon.equals("None") ? "" : " +" + addon);
-        double unitPrice = price + addonPrice;  // 🔥 FIXED: 45 + 20 = 65
-        
+        double unitPrice = price + addonPrice;
         
         System.out.println("💰 FINAL unitPrice: ₱" + String.format("%.2f", unitPrice) + " x " + qty);
         

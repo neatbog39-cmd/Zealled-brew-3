@@ -194,31 +194,24 @@ public class Products extends javax.swing.JFrame {
         }
 
         java.sql.ResultSet rs = pst.executeQuery();
-
         DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
         model.setRowCount(0);
 
         while (rs.next()) {
-            // STORE RAW DATA 
-            int rawPrice = rs.getInt("Price");  
-            int rawQuantity = rs.getInt("Quantity");  
-            
-            
-            String displayPrice = String.format("₱%,d", rawPrice);
-            String displayQuantity = (rawQuantity == 0) ? "Out of Stock" : String.valueOf(rawQuantity);
-            
+            double rawPrice = rs.getDouble("Price");
+            int rawQuantity = rs.getInt("Quantity");
+
             model.addRow(new Object[]{
                 rs.getInt("ProductID"),
                 rs.getString("Name"),
                 rs.getString("Category"),
                 rs.getString("Size"),
-                rawPrice,        
-                rawQuantity      
+                rawPrice,
+                rawQuantity
             });
-            
-            
-            formatTableDisplay();
         }
+        formatTableDisplay(); // ✅ MOVED OUTSIDE the while loop
+
     } catch (Exception e) {
         javax.swing.JOptionPane.showMessageDialog(this, "Error loading stock data: " + e.getMessage());
     }
@@ -235,7 +228,7 @@ public class Products extends javax.swing.JFrame {
          java.sql.ResultSet rs = st.executeQuery(sql)) {
        
         while (rs.next()) {
-            int rawPrice = rs.getInt("Price");
+            double rawPrice = rs.getDouble("Price");
             int rawQuantity = rs.getInt("Quantity");
             
             model.addRow(new Object[]{
@@ -267,19 +260,19 @@ public class Products extends javax.swing.JFrame {
         java.sql.ResultSet rs = pst.executeQuery();
 
         while (rs.next()) {
-            int rawPrice = rs.getInt("Price");
+            double rawPrice = rs.getDouble("Price"); // ✅ FIXED: was getInt
             int rawQuantity = rs.getInt("Quantity");
-            
+
             model.addRow(new Object[]{
                 rs.getInt("ProductID"),
                 rs.getString("Name"),
                 rs.getString("Category"),
                 rs.getString("Size"),
-                rawPrice,        
-                rawQuantity      
+                rawPrice,
+                rawQuantity
             });
         }
-        formatTableDisplay(); 
+        formatTableDisplay();
     } catch (Exception e) {
         javax.swing.JOptionPane.showMessageDialog(this, "Error loading data: " + e.getMessage());
     }
@@ -288,15 +281,21 @@ public class Products extends javax.swing.JFrame {
     
     // =========================  TABLE FORMATTING =========================
     private void formatTableDisplay() {
-    java.text.NumberFormat currencyFormat = new java.text.DecimalFormat("₱#,##0.00");  
-    javax.swing.table.TableCellRenderer priceRenderer = (javax.swing.JTable table, Object value, 
+    java.text.NumberFormat currencyFormat = new java.text.DecimalFormat("₱#,##0.00");
+
+    // Price renderer
+    javax.swing.table.TableCellRenderer priceRenderer = (javax.swing.JTable table, Object value,
         boolean isSelected, boolean hasFocus, int row, int column) -> {
         javax.swing.JLabel label = new javax.swing.JLabel();
-        if (value != null && value instanceof Integer) {
-            double price = (Integer) value;  
-            label.setText(currencyFormat.format(price));
+        if (value != null) {
+            try {
+                double price = Double.parseDouble(value.toString()); // ✅ handles any number type
+                label.setText(currencyFormat.format(price));
+            } catch (Exception ex) {
+                label.setText("₱0.00");
+            }
         } else {
-            label.setText(value != null ? value.toString() : "₱0.00");
+            label.setText("₱0.00");
         }
         label.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         if (isSelected) {
@@ -310,21 +309,25 @@ public class Products extends javax.swing.JFrame {
         return label;
     };
     jTable1.getColumnModel().getColumn(4).setCellRenderer(priceRenderer);
-    
-    
-    javax.swing.table.TableCellRenderer quantityRenderer = (javax.swing.JTable table, Object value, 
+
+    // Quantity renderer
+    javax.swing.table.TableCellRenderer quantityRenderer = (javax.swing.JTable table, Object value,
         boolean isSelected, boolean hasFocus, int row, int column) -> {
         javax.swing.JLabel label = new javax.swing.JLabel();
-        if (value != null && value instanceof Integer) {
-            int qty = (Integer) value;
-            label.setText(qty == 0 ? "Out of Stock" : String.valueOf(qty));
-            if (qty == 0) {
-                label.setForeground(java.awt.Color.RED);
-            } else if (qty < 10) {
-                label.setForeground(java.awt.Color.ORANGE);  
+        if (value != null) {
+            try {
+                int qty = Integer.parseInt(value.toString()); // ✅ handles any number type
+                label.setText(qty == 0 ? "Out of Stock" : String.valueOf(qty));
+                if (qty == 0) {
+                    label.setForeground(java.awt.Color.RED);
+                } else if (qty < 10) {
+                    label.setForeground(java.awt.Color.ORANGE);
+                }
+            } catch (Exception ex) {
+                label.setText("0");
             }
         } else {
-            label.setText(value != null ? value.toString() : "0");
+            label.setText("0");
         }
         label.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         if (isSelected) {
@@ -954,7 +957,8 @@ public class Products extends javax.swing.JFrame {
     }
 
     try {
-        int price = Integer.parseInt(priceStr);
+        double price = Double.parseDouble(priceStr);
+        
         int quantity = Integer.parseInt(quantityStr);
         
         
@@ -977,7 +981,7 @@ public class Products extends javax.swing.JFrame {
             pst.setString(1, name);
             pst.setString(2, category);
             pst.setString(3, size);
-            pst.setInt(4, price);
+            pst.setDouble(4, price);
             pst.setInt(5, quantity);
             pst.executeUpdate();
 
@@ -1010,7 +1014,8 @@ public class Products extends javax.swing.JFrame {
     String itemName = (String) jTable1.getValueAt(selectedRow, 1);
     String category = (String) jTable1.getValueAt(selectedRow, 2);
     String size = (String) jTable1.getValueAt(selectedRow, 3);
-    int price = (int) jTable1.getValueAt(selectedRow, 4);  
+    double price = ((Number) jTable1.getValueAt(selectedRow, 4)).doubleValue();
+    
     int quantity = (int) jTable1.getValueAt(selectedRow, 5); 
 
     
@@ -1117,7 +1122,7 @@ public class Products extends javax.swing.JFrame {
     }
 
     try {
-        int price = Integer.parseInt(priceStr);
+        double price = Double.parseDouble(priceStr);
         int quantity = Integer.parseInt(quantityStr);
 
         
@@ -1137,7 +1142,7 @@ public class Products extends javax.swing.JFrame {
             pst.setString(1, name);
             pst.setString(2, category);
             pst.setString(3, size);
-            pst.setInt(4, price);
+            pst.setDouble(4, price);
             pst.setInt(5, quantity);
             pst.setInt(6, editingProductId);
             int rowsUpdated = pst.executeUpdate();
