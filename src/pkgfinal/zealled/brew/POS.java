@@ -55,7 +55,7 @@ public class POS extends javax.swing.JFrame {
     // Products
     private void setupModels() {
     // MATCH Products form EXACTLY
-    String[] columns = {"ID", "Name", "Category", "Size", "Selling Price", "Quantity"};
+    String[] columns = {"ID","Name", "Category", "Size", "Selling Price", "Quantity"};
     productModel = new DefaultTableModel(columns, 0) { 
         public boolean isCellEditable(int row, int col) { return false; } 
     };
@@ -218,19 +218,40 @@ public class POS extends javax.swing.JFrame {
         }
     });
 
-    jTableProducts.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-        public java.awt.Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
-            boolean isSelected, boolean hasFocus, int row, int column) {
-            java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-            try {
-                int stock = Integer.parseInt(table.getValueAt(row, 5).toString());
-                if (stock <= 0) c.setForeground(java.awt.Color.RED);
-                else if (stock <= 5) c.setForeground(java.awt.Color.ORANGE);
-                else c.setForeground(new java.awt.Color(0, 128, 0));
-            } catch (Exception ignored) {}
-            return c;
-        }
-    });
+   jTableProducts.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+    public java.awt.Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+        boolean isSelected, boolean hasFocus, int row, int column) {
+        java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        try {
+            int stock = Integer.parseInt(table.getValueAt(row, 5).toString());
+
+            if (stock <= 0) {
+                // ✅ Out of Stock — bright red text + light red background
+                c.setForeground(new java.awt.Color(180, 0, 0));
+                c.setBackground(new java.awt.Color(255, 200, 200));
+                c.setFont(c.getFont().deriveFont(java.awt.Font.BOLD));
+            } else if (stock <= 5) {
+                // ✅ Low Stock — orange-red text + light yellow background
+                c.setForeground(new java.awt.Color(0, 0, 0));
+                c.setBackground(new java.awt.Color(255, 240, 180));
+                c.setFont(c.getFont().deriveFont(java.awt.Font.BOLD));
+            } else {
+                // ✅ Normal Stock — green text + default background
+                c.setForeground(new java.awt.Color(0, 128, 0));
+                c.setBackground(table.getBackground());
+                c.setFont(c.getFont().deriveFont(java.awt.Font.PLAIN));
+            }
+
+            // ✅ Keep selection highlight intact
+            if (isSelected) {
+                c.setBackground(table.getSelectionBackground());
+                c.setForeground(table.getSelectionForeground());
+            }
+
+        } catch (Exception ignored) {}
+        return c;
+    }
+});
 
     txtDisplayPOS.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 16));
     txtDisplayPOS.setMargin(new java.awt.Insets(10, 20, 10, 10));
@@ -1038,6 +1059,7 @@ public class POS extends javax.swing.JFrame {
         });
         jScrollPane2.setViewportView(jTableProducts);
 
+        jTableAddons.setFont(new java.awt.Font("Serif", 0, 18)); // NOI18N
         jTableAddons.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null},
@@ -1072,7 +1094,7 @@ public class POS extends javax.swing.JFrame {
                 .addContainerGap(13, Short.MAX_VALUE))
         );
 
-        jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 220, 1030, 310));
+        jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 200, 1030, 310));
 
         jLabel1.setText("Table Number");
 
@@ -1113,38 +1135,37 @@ public class POS extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(cmbOrderType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addGap(15, 15, 15)
-                        .addComponent(jLabel1)
-                        .addGap(18, 18, 18)
-                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                .addGap(29, 29, 29)
-                .addComponent(btnReports)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 159, Short.MAX_VALUE)
-                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(39, 39, 39))
+                        .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel4Layout.createSequentialGroup()
+                                .addGap(15, 15, 15)
+                                .addComponent(jLabel1)
+                                .addGap(18, 18, 18)
+                                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel4Layout.createSequentialGroup()
+                                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(110, 110, 110)
+                        .addComponent(btnReports)))
+                .addContainerGap(129, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addContainerGap(35, Short.MAX_VALUE)
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(27, 27, 27))
+                            .addComponent(jLabel1)
+                            .addComponent(jLabel2))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED))
                     .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addGap(29, 29, 29)
-                        .addComponent(btnReports)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
-                    .addComponent(jLabel2))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGap(18, 18, 18)
+                        .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(btnReports)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 84, Short.MAX_VALUE)))
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(txtTableNumber, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(txtCustomerName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -1154,6 +1175,7 @@ public class POS extends javax.swing.JFrame {
 
         jPanel1.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 550, 170));
 
+        jTableOrder.setFont(new java.awt.Font("Serif", 0, 18)); // NOI18N
         jTableOrder.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null, null, null},
@@ -1209,7 +1231,7 @@ public class POS extends javax.swing.JFrame {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane5, javax.swing.GroupLayout.DEFAULT_SIZE, 1018, Short.MAX_VALUE)
+                    .addComponent(jScrollPane5)
                     .addGroup(jPanel5Layout.createSequentialGroup()
                         .addComponent(btnEditQty)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -1220,7 +1242,7 @@ public class POS extends javax.swing.JFrame {
                         .addComponent(btnClearAll)
                         .addGap(55, 55, 55)
                         .addComponent(btnChangeType)
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                        .addGap(0, 498, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel5Layout.setVerticalGroup(
@@ -1238,7 +1260,7 @@ public class POS extends javax.swing.JFrame {
                 .addContainerGap(111, Short.MAX_VALUE))
         );
 
-        jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 530, 1030, 350));
+        jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 520, 1030, 350));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -1576,6 +1598,97 @@ public class POS extends javax.swing.JFrame {
         // TODO add your handling code here:
      int selectedRow = jTableOrder.getSelectedRow();
     if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "⚠️ Select an item to change addon.");
+        return;
+    }
+
+    String productName = orderModel.getValueAt(selectedRow, 0).toString();
+    String currentAddon = orderModel.getValueAt(selectedRow, 2).toString();
+    int qty = (int) orderModel.getValueAt(selectedRow, 3);
+    double currentUnitPrice = ((Number) orderModel.getValueAt(selectedRow, 4)).doubleValue();
+
+    // Load addons from DB
+    java.util.List<String> addonList = new java.util.ArrayList<>();
+    addonList.add("None");
+    try (Connection con = ConnectorXampp.connect();
+         Statement addonSt = con.createStatement();
+         ResultSet addonRs = addonSt.executeQuery("SELECT Name FROM addons ORDER BY Name")) {
+        while (addonRs.next()) addonList.add(addonRs.getString("Name"));
+    } catch (Exception e) {
+        System.out.println("Addon load error: " + e.getMessage());
+    }
+    String[] addonOptions = addonList.toArray(new String[0]);
+
+    String newAddon = (String) JOptionPane.showInputDialog(
+        this,
+        "🔄 Change addon for: " + productName +
+        "\nCurrent Addon: " + currentAddon +
+        "\n\nSelect new addon:",
+        "Change Addon",
+        JOptionPane.QUESTION_MESSAGE,
+        null,
+        addonOptions,
+        currentAddon
+    );
+
+    if (newAddon == null || newAddon.equals(currentAddon)) return;
+
+    double oldAddonPrice = getAddonPrice(currentAddon);
+    double newAddonPrice = getAddonPrice(newAddon);
+    double basePrice = currentUnitPrice - oldAddonPrice;
+    double newUnitPrice = basePrice + newAddonPrice;
+    double newSubtotal = newUnitPrice * qty;
+
+    subtotal -= currentUnitPrice * qty;
+    subtotal += newSubtotal;
+    if (subtotal < 0) subtotal = 0;
+
+    orderModel.setValueAt(newAddon, selectedRow, 2);
+    orderModel.setValueAt(newUnitPrice, selectedRow, 4);
+    orderModel.setValueAt(newSubtotal, selectedRow, 5);
+
+    updateReceiptDisplay();
+    JOptionPane.showMessageDialog(this, "✅ Addon changed to: " + newAddon);
+    }//GEN-LAST:event_btnChangeAddonActionPerformed
+
+    private void btnClearAllActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearAllActionPerformed
+        // TODO add your handling code here:
+    if (orderModel.getRowCount() == 0) {
+        JOptionPane.showMessageDialog(this, "⚠️ No items in order.");
+        return;
+    }
+
+    int confirm = JOptionPane.showConfirmDialog(this,
+        "🗑️ Clear ALL items from order?",
+        "Clear Order", JOptionPane.YES_NO_OPTION);
+
+    if (confirm == JOptionPane.YES_OPTION) {
+        orderModel.setRowCount(0);
+        subtotal = 0;
+        total = 0;
+        cashInput = "";
+        receiptItems = "";
+        itemQtyMap.clear();
+        itemPriceMap.clear();
+        productIdMap.clear();
+        itemAddonsMap.clear();
+        txtTableNumber.setText("");
+        txtTableNumber.setEnabled(true);
+        txtCustomerName.setText("");
+
+        // ✅ Prevent action listener from firing
+        isSettingUpCombos = true;
+        cmbOrderType.setSelectedIndex(0);
+        isSettingUpCombos = false;
+
+        showWelcomeDisplay();
+    }
+    }//GEN-LAST:event_btnClearAllActionPerformed
+
+    private void btnChangeTypeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnChangeTypeActionPerformed
+        // TODO add your handling code here:
+       int selectedRow = jTableOrder.getSelectedRow();
+    if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "⚠️ Select an item to change order type.");
         return;
     }
@@ -1623,85 +1736,16 @@ public class POS extends javax.swing.JFrame {
             return;
         }
 
-        // ✅ Update BOTH the text field and the order table row
         txtTableNumber.setText(tableNo.trim());
-        orderModel.setValueAt(tableNo.trim(), selectedRow, 6); // ✅ this is what was missing
+        orderModel.setValueAt(tableNo.trim(), selectedRow, 6);
     }
 
-    // ✅ Update order type in table and combobox
-    orderModel.setValueAt(newType, selectedRow, 8);
-    cmbOrderType.setSelectedItem(newType);
-
-    updateReceiptDisplay();
-    JOptionPane.showMessageDialog(this, "✅ Order type changed to: " + newType);
-    }//GEN-LAST:event_btnChangeAddonActionPerformed
-
-    private void btnClearAllActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearAllActionPerformed
-        // TODO add your handling code here:
-    if (orderModel.getRowCount() == 0) {
-        JOptionPane.showMessageDialog(this, "⚠️ No items in order.");
-        return;
-    }
-
-    int confirm = JOptionPane.showConfirmDialog(this,
-        "🗑️ Clear ALL items from order?",
-        "Clear Order", JOptionPane.YES_NO_OPTION);
-
-    if (confirm == JOptionPane.YES_OPTION) {
-        orderModel.setRowCount(0);
-        subtotal = 0;
-        total = 0;
-        cashInput = "";
-        receiptItems = "";
-        itemQtyMap.clear();
-        itemPriceMap.clear();
-        productIdMap.clear();
-        itemAddonsMap.clear();
-        txtTableNumber.setText("");
-        txtTableNumber.setEnabled(true);
-        txtCustomerName.setText("");
-
-        // ✅ Prevent action listener from firing
-        isSettingUpCombos = true;
-        cmbOrderType.setSelectedIndex(0);
-        isSettingUpCombos = false;
-
-        showWelcomeDisplay();
-    }
-    }//GEN-LAST:event_btnClearAllActionPerformed
-
-    private void btnChangeTypeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnChangeTypeActionPerformed
-        // TODO add your handling code here:
-         int selectedRow = jTableOrder.getSelectedRow();
-    if (selectedRow == -1) {
-        JOptionPane.showMessageDialog(this, "⚠️ Select an item to change order type.");
-        return;
-    }
-
-    String productName = orderModel.getValueAt(selectedRow, 0).toString();
-    String currentType = orderModel.getValueAt(selectedRow, 8).toString();
-
-    String[] typeOptions = {"Dine In", "Take Out"};
-
-    String newType = (String) JOptionPane.showInputDialog(
-        this,
-        "🛎️ Change order type for: " + productName +
-        "\nCurrent Type: " + currentType +
-        "\n\nSelect new type:",
-        "Change Order Type",
-        JOptionPane.QUESTION_MESSAGE,
-        null,
-        typeOptions,
-        currentType
-    );
-
-    if (newType == null || newType.equals(currentType)) return;
-
-    // ✅ Update the row
     orderModel.setValueAt(newType, selectedRow, 8);
 
-    // ✅ Update cmbOrderType to match
+    // ✅ Update combobox without triggering listener
+    isSettingUpCombos = true;
     cmbOrderType.setSelectedItem(newType);
+    isSettingUpCombos = false;
 
     updateReceiptDisplay();
     JOptionPane.showMessageDialog(this, "✅ Order type changed to: " + newType);

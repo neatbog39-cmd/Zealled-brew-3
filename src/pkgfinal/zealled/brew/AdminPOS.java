@@ -31,6 +31,8 @@ public class AdminPOS extends javax.swing.JFrame {
     private DefaultTableModel productModel;
     private DefaultTableModel addonsModel;
     private String selectedReceiptItem = "";
+    private DefaultTableModel orderModel;
+    private boolean isSettingUpCombos = false;
     /**
      * Creates new form POS
      */
@@ -44,16 +46,16 @@ public class AdminPOS extends javax.swing.JFrame {
         loadPOSTables();
         showWelcomeDisplay();
         setupEventListeners();
-        loadAddonsToComboBox();
         setupCombos();
+        setupOrderTable();
     }
     
     
-   // ========================= TABLE & UI SETUP =========================
+    // ========================= TABLE & UI SETUP =========================
     // Products
     private void setupModels() {
     // MATCH Products form EXACTLY
-    String[] columns = {"ID", "Name", "Category", "Size", "Selling Price", "Quantity"};
+    String[] columns = {"ID","Name", "Category", "Size", "Selling Price", "Quantity"};
     productModel = new DefaultTableModel(columns, 0) { 
         public boolean isCellEditable(int row, int col) { return false; } 
     };
@@ -136,41 +138,125 @@ public class AdminPOS extends javax.swing.JFrame {
 }
     // Dine in / Take out
     private void setupCombos() {
-        cmbOrderType.removeAllItems();
-        cmbOrderType.addItem("Dine In");
-        cmbOrderType.addItem("Take Out");
-        cmbAddons.setSelectedIndex(0);
-    }
+    cmbOrderType.removeAllItems();
+    cmbOrderType.addItem("Dine In");
+    cmbOrderType.addItem("Take Out");
+
+    cmbOrderType.addActionListener(e -> {
+        if (isSettingUpCombos) return; // ✅ prevent infinite loop
+
+        String selected = cmbOrderType.getSelectedItem() != null ?
+            cmbOrderType.getSelectedItem().toString() : "Dine In";
+
+        if (selected.equals("Take Out")) {
+            // ✅ Take Out — clear and disable table number
+            txtTableNumber.setText("");
+            txtTableNumber.setEnabled(false);
+
+            // ✅ Update all order rows if any
+            for (int i = 0; i < orderModel.getRowCount(); i++) {
+                orderModel.setValueAt("—", i, 6);
+                orderModel.setValueAt("Take Out", i, 8);
+            }
+            if (orderModel.getRowCount() > 0) updateReceiptDisplay();
+
+        } else {
+            // ✅ Dine In — prompt for table number
+            txtTableNumber.setEnabled(true);
+
+            String tableNo = JOptionPane.showInputDialog(this,
+                "🪑 Enter Table Number for Dine In:",
+                "Table Number",
+                JOptionPane.QUESTION_MESSAGE);
+
+            if (tableNo == null || tableNo.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "⚠️ Table Number is required for Dine In!");
+                // ✅ Revert to Take Out
+                isSettingUpCombos = true;
+                cmbOrderType.setSelectedItem("Take Out");
+                isSettingUpCombos = false;
+                txtTableNumber.setText("");
+                txtTableNumber.setEnabled(false);
+                return;
+            }
+            if (!tableNo.trim().matches("\\d+")) {
+                JOptionPane.showMessageDialog(this, "⚠️ Table Number must be numbers only!");
+                // ✅ Revert to Take Out
+                isSettingUpCombos = true;
+                cmbOrderType.setSelectedItem("Take Out");
+                isSettingUpCombos = false;
+                txtTableNumber.setText("");
+                txtTableNumber.setEnabled(false);
+                return;
+            }
+
+            // ✅ Set table number in field and all order rows
+            txtTableNumber.setText(tableNo.trim());
+            for (int i = 0; i < orderModel.getRowCount(); i++) {
+                orderModel.setValueAt(tableNo.trim(), i, 6);
+                orderModel.setValueAt("Dine In", i, 8);
+            }
+            if (orderModel.getRowCount() > 0) updateReceiptDisplay();
+        }
+    });
+}
     // Search / Stock Colors / POS Display
     private void setupEventListeners() {
-        // Search
-        txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyReleased(java.awt.event.KeyEvent evt) {
-                searchProducts(txtSearch.getText().trim());
+    txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
+        public void keyReleased(java.awt.event.KeyEvent evt) {
+            searchProducts(txtSearch.getText().trim());
+        }
+    });
+
+    // ✅ Table number — numbers only
+    txtTableNumber.addKeyListener(new java.awt.event.KeyAdapter() {
+        public void keyTyped(java.awt.event.KeyEvent evt) {
+            char c = evt.getKeyChar();
+            if (!Character.isDigit(c)) {
+                evt.consume();
             }
-        });
-        
-        // Color coding
-        jTableProducts.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-            public java.awt.Component getTableCellRendererComponent(javax.swing.JTable table, Object value, 
-                boolean isSelected, boolean hasFocus, int row, int column) {
-                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                try {
-                    int stock = Integer.parseInt(table.getValueAt(row, 5).toString());
-                    if (stock <= 0) c.setForeground(java.awt.Color.RED);
-                    else if (stock <= 5) c.setForeground(java.awt.Color.ORANGE);
-                    else c.setForeground(new java.awt.Color(0, 128, 0));
-                } catch (Exception ignored) {}
-                return c;
+        }
+    });
+
+   jTableProducts.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+    public java.awt.Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+        boolean isSelected, boolean hasFocus, int row, int column) {
+        java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        try {
+            int stock = Integer.parseInt(table.getValueAt(row, 5).toString());
+
+            if (stock <= 0) {
+                // ✅ Out of Stock — bright red text + light red background
+                c.setForeground(new java.awt.Color(180, 0, 0));
+                c.setBackground(new java.awt.Color(255, 200, 200));
+                c.setFont(c.getFont().deriveFont(java.awt.Font.BOLD));
+            } else if (stock <= 5) {
+                // ✅ Low Stock — orange-red text + light yellow background
+                c.setForeground(new java.awt.Color(0, 0, 0));
+                c.setBackground(new java.awt.Color(255, 240, 180));
+                c.setFont(c.getFont().deriveFont(java.awt.Font.BOLD));
+            } else {
+                // ✅ Normal Stock — green text + default background
+                c.setForeground(new java.awt.Color(0, 128, 0));
+                c.setBackground(table.getBackground());
+                c.setFont(c.getFont().deriveFont(java.awt.Font.PLAIN));
             }
-        });
-        
-        txtDisplayPOS.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 16));
-        txtDisplayPOS.setMargin(new java.awt.Insets(10, 20, 10, 10));
-        txtDisplayPOS.setEditable(false);
-        
-        
+
+            // ✅ Keep selection highlight intact
+            if (isSelected) {
+                c.setBackground(table.getSelectionBackground());
+                c.setForeground(table.getSelectionForeground());
+            }
+
+        } catch (Exception ignored) {}
+        return c;
     }
+});
+
+    txtDisplayPOS.setFont(new java.awt.Font("Monospaced", java.awt.Font.BOLD, 16));
+    txtDisplayPOS.setMargin(new java.awt.Insets(10, 20, 10, 10));
+    txtDisplayPOS.setEditable(false);
+}
     
     
     // ========================= DATA LOADERS =========================
@@ -225,16 +311,7 @@ public class AdminPOS extends javax.swing.JFrame {
     }
 }
     
-    private void loadAddonsToComboBox() {
-        cmbAddons.removeAllItems();
-        cmbAddons.addItem("None");
-        String sql = "SELECT Name FROM addons ORDER BY Name";
-        try (Connection con = ConnectorXampp.connect(); Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) cmbAddons.addItem(rs.getString("Name"));
-        } catch (Exception e) {
-            System.out.println("Addons load failed: " + e.getMessage());
-        }
-    }
+
     
     private void loadAddonsTable() {
     addonsModel.setRowCount(0);
@@ -334,39 +411,61 @@ public class AdminPOS extends javax.swing.JFrame {
     private void updateReceiptDisplay() {
     receiptItems = "";
     int totalItems = 0;
-    for (String item : itemQtyMap.keySet()) {
-        int qty = itemQtyMap.get(item);
-        double price = itemPriceMap.get(item);
-        receiptItems += String.format("%-25s x%-2d ₱%.2f\n", item, qty, price * qty);
-        totalItems += qty;
+    subtotal = 0;
+
+    String orderType = cmbOrderType.getSelectedItem() != null ?
+                       cmbOrderType.getSelectedItem().toString() : "Dine In";
+    if (orderModel.getRowCount() > 0) {
+        orderType = orderModel.getValueAt(0, 8).toString();
     }
-    
-    // VAT 
-    double vatable = subtotal / 1.12;  
-    double vat = vatable * 0.12;      
-    total = vatable + vat;            
-    
-    // cashier name, date, time
+
+    // ✅ Read table number from order table row — not from txtTableNumber
+    String tableNo = "—";
+    if (orderModel.getRowCount() > 0) {
+        tableNo = orderModel.getValueAt(0, 6).toString();
+    }
+
+    for (int i = 0; i < orderModel.getRowCount(); i++) {
+        String productName = orderModel.getValueAt(i, 0).toString();
+        String addon = orderModel.getValueAt(i, 2).toString();
+        int qty = (int) orderModel.getValueAt(i, 3);
+        double unitPrice = ((Number) orderModel.getValueAt(i, 4)).doubleValue();
+        double rowSubtotal = unitPrice * qty;
+
+        subtotal += rowSubtotal;
+        totalItems += qty;
+
+        String displayLine = productName + (addon.equals("None") ? "" : " +" + addon);
+        receiptItems += String.format("%-25s x%-2d ₱%.2f\n", displayLine, qty, rowSubtotal);
+    }
+
+    double vatable = subtotal / 1.12;
+    double vat = vatable * 0.12;
+    total = vatable + vat;
+
     String cashierName = getCurrentCashierName();
     String orderDateTime = new java.text.SimpleDateFormat("MMM dd, yyyy hh:mm a").format(new java.util.Date());
-    String orderType = cmbOrderType.getSelectedItem() != null ? 
-                       cmbOrderType.getSelectedItem().toString() : "Dine In";
-    
+    String customerName = txtCustomerName.getText().trim().isEmpty() ? "—" : txtCustomerName.getText().trim();
     double change = cashInput.isEmpty() ? 0 : Double.parseDouble(cashInput) - total;
-    
+
+    // ✅ Only show Table # line if Dine In
+    String tableNoLine = orderType.equals("Dine In") ? "Table #:  " + tableNo + "\n" : "";
+
     txtDisplayPOS.setText(
         "☕ ZEALLED BREWS ☕\n" +
         "============================\n" +
-        "Cashier: " + cashierName + "\n" +
-        "Date: " + orderDateTime + "\n" +
-        "Type: " + orderType + "\n\n" +
+        "Cashier:  " + cashierName + "\n" +
+        "Date:     " + orderDateTime + "\n" +
+        "Type:     " + orderType + "\n" +
+        tableNoLine +                          // ✅ only shown for Dine In
+        "Customer: " + customerName + "\n\n" +
         receiptItems +
         "\n----------------------------\n" +
         "Total Items: " + totalItems + "\n" +
-        "Vatable:    ₱" + String.format("%.2f", vatable) + "\n" +  
-        "VAT(12%):   ₱" + String.format("%.2f", vat) + "\n" +      
-        "TOTAL:      ₱" + String.format("%.2f", total) + "\n" +   
-        (cashInput.isEmpty() ? "" : 
+        "Vatable:    ₱" + String.format("%.2f", vatable) + "\n" +
+        "VAT(12%):   ₱" + String.format("%.2f", vat) + "\n" +
+        "TOTAL:      ₱" + String.format("%.2f", total) + "\n" +
+        (cashInput.isEmpty() ? "" :
         "Cash:       ₱" + String.format("%.2f", Double.parseDouble(cashInput)) + "\n" +
         "Change:     ₱" + String.format("%.2f", change))
     );
@@ -398,7 +497,7 @@ public class AdminPOS extends javax.swing.JFrame {
     
     // Payment
     private void processPayment() {
-    if (itemQtyMap.isEmpty()) {
+    if (orderModel.getRowCount() == 0) {  // ✅ check orderModel instead of itemQtyMap
         JOptionPane.showMessageDialog(this, "📦 Add items first!");
         return;
     }
@@ -406,39 +505,38 @@ public class AdminPOS extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(this, "💰 Enter cash amount!");
         return;
     }
-    
+
     try {
         double cash = Double.parseDouble(cashInput);
         if (cash < total) {
             JOptionPane.showMessageDialog(this, String.format("💳 Need ₱%.2f more!", total - cash));
             return;
         }
-        
-        // 🔥 VAT BREAKDOWN IN CONFIRMATION
+
         double vatable = subtotal / 1.12;
         double vat = vatable * 0.12;
-        
-        if (JOptionPane.showConfirmDialog(this, 
+
+        if (JOptionPane.showConfirmDialog(this,
             "Vatable:  ₱" + String.format("%.2f", vatable) + "\n" +
             "VAT(12%): ₱" + String.format("%.2f", vat) + "\n" +
             "TOTAL:    ₱" + String.format("%.2f", total) + "\n\n" +
             "Cash:     ₱" + String.format("%.2f", cash) + "\n" +
             "Change:   ₱" + String.format("%.2f", cash - total),
             "Confirm Payment", JOptionPane.YES_OPTION) == JOptionPane.YES_OPTION) {
-            
+
             saveOrder(cash, cash - total);
-            
-            String finalReceipt = txtDisplayPOS.getText() + 
+
+            String finalReceipt = txtDisplayPOS.getText() +
                 "\n============================\n" +
                 "✅ PAID! THANK YOU! ☕\n" +
                 "🔔 Receipt printed\n" +
                 "🔄 Resetting...";
-            
+
             txtDisplayPOS.setText(finalReceipt);
             txtDisplayPOS.setCaretPosition(txtDisplayPOS.getDocument().getLength());
-            
+
             new Timer(3000, e -> {
-                resetPOS();
+                resetPOS(); // ✅ this already clears txtTableNumber and txtCustomerName
                 ((Timer)e.getSource()).stop();
             }).start();
         }
@@ -460,14 +558,16 @@ public class AdminPOS extends javax.swing.JFrame {
         
         
         PreparedStatement ps = con.prepareStatement(
-            "INSERT INTO orders (`OrderDate`, `TotalAmount`, `OrderType`, `UserID`, `Cash`, `Change`) VALUES(NOW(), ?, ?, ?, ?, ?)",
-            Statement.RETURN_GENERATED_KEYS
+        "INSERT INTO orders (`OrderDate`, `TotalAmount`, `OrderType`, `UserID`, `Cash`, `Change`, `TableNumber`, `CustomerName`) VALUES(NOW(), ?, ?, ?, ?, ?, ?, ?)",
+        Statement.RETURN_GENERATED_KEYS
         );
         ps.setDouble(1, total);
         ps.setString(2, cmbOrderType.getSelectedItem().toString());
-        ps.setInt(3, userId);        
+        ps.setInt(3, userId);
         ps.setDouble(4, cash);
         ps.setDouble(5, change);
+        ps.setString(6, txtTableNumber.getText().trim().isEmpty() ? "—" : txtTableNumber.getText().trim()); // ✅ NEW
+        ps.setString(7, txtCustomerName.getText().trim().isEmpty() ? "—" : txtCustomerName.getText().trim()); // ✅ NEW
         ps.executeUpdate();
         
         ResultSet rs = ps.getGeneratedKeys();
@@ -575,17 +675,24 @@ public class AdminPOS extends javax.swing.JFrame {
     
     // ========================= RESET =========================
     private void resetPOS() {
-    subtotal = total = 0; 
+    subtotal = total = 0;
     cashInput = receiptItems = "";
-    itemQtyMap.clear(); 
-    itemPriceMap.clear(); 
+    itemQtyMap.clear();
+    itemPriceMap.clear();
     productIdMap.clear();
-     itemAddonsMap.clear(); 
-    
-    txtSearch.setText(""); 
-    cmbAddons.setSelectedIndex(0);
-    
-    
+    itemAddonsMap.clear();
+    orderModel.setRowCount(0);
+
+    txtSearch.setText("");
+    txtTableNumber.setText("");
+    txtTableNumber.setEnabled(true);
+    txtCustomerName.setText("");
+
+    // ✅ Prevent action listener from firing when resetting combobox
+    isSettingUpCombos = true;
+    cmbOrderType.setSelectedIndex(0);
+    isSettingUpCombos = false;
+
     txtDisplayPOS.setText("🔄 POS Reset Complete!\nReady for next order...");
     new Timer(1000, e -> {
         showWelcomeDisplay();
@@ -593,6 +700,67 @@ public class AdminPOS extends javax.swing.JFrame {
         ((Timer)e.getSource()).stop();
     }).start();
 }
+    
+    private void setupOrderTable() {
+    String[] columns = {"Product Name", "Size", "Addon", "Qty", "Unit Price", "Subtotal", "Table #", "Customer", "Order Type"};
+    orderModel = new DefaultTableModel(columns, 0) {
+        public boolean isCellEditable(int row, int col) { return false; }
+    };
+    jTableOrder.setModel(orderModel);
+
+    java.text.NumberFormat currencyFormat = new java.text.DecimalFormat("₱#,##0.00");
+    javax.swing.table.TableCellRenderer priceRenderer = (table, value, isSelected, hasFocus, row, column) -> {
+        javax.swing.JLabel label = new javax.swing.JLabel();
+        if (value != null) {
+            try {
+                double price = Double.parseDouble(value.toString());
+                label.setText(currencyFormat.format(price));
+            } catch (Exception ex) {
+                label.setText("₱0.00");
+            }
+        } else {
+            label.setText("₱0.00");
+        }
+        label.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        label.setOpaque(true);
+        if (isSelected) {
+            label.setBackground(table.getSelectionBackground());
+            label.setForeground(table.getSelectionForeground());
+        } else {
+            label.setBackground(table.getBackground());
+            label.setForeground(table.getForeground());
+        }
+        return label;
+    };
+    jTableOrder.getColumnModel().getColumn(4).setCellRenderer(priceRenderer);
+    jTableOrder.getColumnModel().getColumn(5).setCellRenderer(priceRenderer);
+
+    jTableOrder.getColumnModel().getColumn(0).setPreferredWidth(150);
+    jTableOrder.getColumnModel().getColumn(1).setPreferredWidth(60);
+    jTableOrder.getColumnModel().getColumn(2).setPreferredWidth(100);
+    jTableOrder.getColumnModel().getColumn(3).setPreferredWidth(40);
+    jTableOrder.getColumnModel().getColumn(4).setPreferredWidth(90);
+    jTableOrder.getColumnModel().getColumn(5).setPreferredWidth(90);
+    jTableOrder.getColumnModel().getColumn(6).setPreferredWidth(70);
+    jTableOrder.getColumnModel().getColumn(7).setPreferredWidth(100);
+    jTableOrder.getColumnModel().getColumn(8).setPreferredWidth(90);
+}
+    
+    private int getAvailableStock(String productName, String size) {
+    String sql = "SELECT Quantity FROM products WHERE Name = ? AND Size = ? LIMIT 1";
+    try (Connection con = ConnectorXampp.connect();
+         PreparedStatement ps = con.prepareStatement(sql)) {
+        ps.setString(1, productName);
+        ps.setString(2, size);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) return rs.getInt("Quantity");
+    } catch (Exception e) {
+        System.out.println("Stock check error: " + e.getMessage());
+    }
+    return 0;
+}
+   
+   
    
    
   
@@ -612,8 +780,6 @@ public class AdminPOS extends javax.swing.JFrame {
         jPanel1 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         txtDisplayPOS = new javax.swing.JTextArea();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        jTableProducts = new javax.swing.JTable();
         jPanel2 = new javax.swing.JPanel();
         btnPAY = new javax.swing.JButton();
         btnErase = new javax.swing.JButton();
@@ -628,14 +794,28 @@ public class AdminPOS extends javax.swing.JFrame {
         btn8 = new javax.swing.JButton();
         btn9 = new javax.swing.JButton();
         btnAC = new javax.swing.JButton();
-        txtSearch = new javax.swing.JTextField();
-        cmbOrderType = new javax.swing.JComboBox<>();
-        cmbAddons = new javax.swing.JComboBox<>();
-        btnAddAddons = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
-        jLabel3 = new javax.swing.JLabel();
+        btnLogOut = new javax.swing.JButton();
+        jPanel3 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        jTableProducts = new javax.swing.JTable();
         jScrollPane4 = new javax.swing.JScrollPane();
         jTableAddons = new javax.swing.JTable();
+        jPanel4 = new javax.swing.JPanel();
+        txtTableNumber = new javax.swing.JTextField();
+        jLabel1 = new javax.swing.JLabel();
+        txtCustomerName = new javax.swing.JTextField();
+        jLabel2 = new javax.swing.JLabel();
+        cmbOrderType = new javax.swing.JComboBox<>();
+        txtSearch = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        jPanel5 = new javax.swing.JPanel();
+        jScrollPane5 = new javax.swing.JScrollPane();
+        jTableOrder = new javax.swing.JTable();
+        btnEditQty = new javax.swing.JButton();
+        btnChangeAddon = new javax.swing.JButton();
+        btnCancelItem = new javax.swing.JButton();
+        btnClearAll = new javax.swing.JButton();
+        btnChangeType = new javax.swing.JButton();
         btnDashBoard = new javax.swing.JButton();
         btnProducts = new javax.swing.JButton();
         btnCategory = new javax.swing.JButton();
@@ -645,7 +825,7 @@ public class AdminPOS extends javax.swing.JFrame {
         btnUtilities = new javax.swing.JButton();
         btnInventory = new javax.swing.JButton();
         btnPOS = new javax.swing.JButton();
-        btnLogOut = new javax.swing.JButton();
+        btnLogOut1 = new javax.swing.JButton();
 
         jTableCart.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -669,27 +849,7 @@ public class AdminPOS extends javax.swing.JFrame {
         txtDisplayPOS.setRows(5);
         jScrollPane1.setViewportView(txtDisplayPOS);
 
-        jPanel1.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 450, 550));
-
-        jTableProducts.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null}
-            },
-            new String [] {
-                "ProductID", "Name", "Category", "Size", "Price", "Quantity"
-            }
-        ));
-        jTableProducts.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                jTableProductsMouseClicked(evt);
-            }
-        });
-        jScrollPane2.setViewportView(jTableProducts);
-
-        jPanel1.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 10, 570, 350));
+        jPanel1.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(1050, 0, 480, 530));
 
         jPanel2.setForeground(new java.awt.Color(51, 51, 51));
 
@@ -810,129 +970,105 @@ public class AdminPOS extends javax.swing.JFrame {
             }
         });
 
-        txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyReleased(java.awt.event.KeyEvent evt) {
-                txtSearchKeyReleased(evt);
-            }
-        });
-
-        cmbOrderType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Dine In", "Take Out" }));
-
-        cmbAddons.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "None", "Black Pearl", "Topping Boba", "Fruity Jelly", "Yakult", "Oreo", "Lychee" }));
-
-        btnAddAddons.setBackground(new java.awt.Color(40, 40, 40));
-        btnAddAddons.setForeground(new java.awt.Color(197, 160, 114));
-        btnAddAddons.setText("Add");
-        btnAddAddons.addActionListener(new java.awt.event.ActionListener() {
+        btnLogOut.setBackground(new java.awt.Color(40, 40, 40));
+        btnLogOut.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnLogOut.setForeground(new java.awt.Color(197, 160, 114));
+        btnLogOut.setText("Log Out");
+        btnLogOut.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnAddAddonsActionPerformed(evt);
+                btnLogOutActionPerformed(evt);
             }
         });
-
-        jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/admin1.1.png"))); // NOI18N
-
-        jLabel3.setFont(new java.awt.Font("Times New Roman", 3, 18)); // NOI18N
-        jLabel3.setText("Search:");
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(jPanel2Layout.createSequentialGroup()
-                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addComponent(btn1, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(btn4, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addComponent(btn7, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(btnAC, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(jPanel2Layout.createSequentialGroup()
-                                        .addComponent(btn5, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(18, 18, 18)
-                                        .addComponent(btn6, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(jPanel2Layout.createSequentialGroup()
-                                        .addComponent(btn2, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addGap(18, 18, 18)
-                                        .addComponent(btn3, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(jPanel2Layout.createSequentialGroup()
-                                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(btn8, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(btn0, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                        .addGap(18, 18, 18)
-                                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(btnErase, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(btn9, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                                .addGap(10, 10, 10))
-                            .addGroup(jPanel2Layout.createSequentialGroup()
-                                .addComponent(btnAddAddons, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(btnPAY, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(48, 48, 48))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                        .addComponent(jLabel1)
-                        .addGap(126, 126, 126))))
-            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap(134, Short.MAX_VALUE)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGap(49, 49, 49)
-                        .addComponent(cmbOrderType, javax.swing.GroupLayout.PREFERRED_SIZE, 137, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(cmbAddons, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGap(69, 69, 69)
-                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btn1, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 255, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(19, Short.MAX_VALUE))
+                        .addComponent(btn2, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btn3, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(btn4, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btn5, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btn6, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(btn7, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btn8, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btn9, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(btnAC, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btn0, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnErase, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(btnPAY, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnLogOut, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(48, 48, 48))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(35, 35, 35)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(62, 62, 62)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(cmbOrderType)
-                    .addComponent(cmbAddons, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 59, Short.MAX_VALUE)
+                .addContainerGap(548, Short.MAX_VALUE)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btn1, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn3, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btn4, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn5, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn6, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btn7, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn8, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btn9, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnAC, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnErase, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btn0, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addComponent(btn0, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnErase, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(btnAddAddons, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(btnPAY, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(196, 196, 196))
+                    .addComponent(btnPAY, javax.swing.GroupLayout.DEFAULT_SIZE, 52, Short.MAX_VALUE)
+                    .addComponent(btnLogOut, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGap(116, 116, 116))
         );
 
-        jPanel1.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(1050, 10, 410, 870));
+        jPanel1.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(1050, 0, 480, 880));
 
+        jTableProducts.setFont(new java.awt.Font("Serif", 0, 18)); // NOI18N
+        jTableProducts.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null},
+                {null, null, null, null, null, null}
+            },
+            new String [] {
+                "ProductID", "Name", "Category", "Size", "Price", "Quantity"
+            }
+        ));
+        jTableProducts.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jTableProductsMouseClicked(evt);
+            }
+        });
+        jScrollPane2.setViewportView(jTableProducts);
+
+        jTableAddons.setFont(new java.awt.Font("Serif", 0, 18)); // NOI18N
         jTableAddons.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null},
@@ -946,7 +1082,180 @@ public class AdminPOS extends javax.swing.JFrame {
         ));
         jScrollPane4.setViewportView(jTableAddons);
 
-        jPanel1.add(jScrollPane4, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 700, 570, 180));
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 1018, Short.MAX_VALUE)
+                    .addComponent(jScrollPane4))
+                .addContainerGap())
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, 141, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(13, Short.MAX_VALUE))
+        );
+
+        jPanel1.add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 200, 1030, 310));
+
+        jLabel1.setText("Table Number");
+
+        jLabel2.setText("Customer name");
+
+        cmbOrderType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Dine In", "Take Out" }));
+
+        txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                txtSearchKeyReleased(evt);
+            }
+        });
+
+        jLabel3.setFont(new java.awt.Font("Times New Roman", 3, 18)); // NOI18N
+        jLabel3.setText("Search:");
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(txtTableNumber, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(txtCustomerName, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(cmbOrderType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jPanel4Layout.createSequentialGroup()
+                            .addGap(15, 15, 15)
+                            .addComponent(jLabel1)
+                            .addGap(18, 18, 18)
+                            .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(jPanel4Layout.createSequentialGroup()
+                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addContainerGap(249, Short.MAX_VALUE))
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel1)
+                            .addComponent(jLabel2))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED))
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addGap(18, 18, 18)
+                        .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 47, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 84, Short.MAX_VALUE)))
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtTableNumber, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtCustomerName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(cmbOrderType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(11, 11, 11))
+        );
+
+        jPanel1.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 550, 170));
+
+        jTableOrder.setFont(new java.awt.Font("Serif", 0, 18)); // NOI18N
+        jTableOrder.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String [] {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane5.setViewportView(jTableOrder);
+
+        btnEditQty.setText("Edit Qty");
+        btnEditQty.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnEditQtyActionPerformed(evt);
+            }
+        });
+
+        btnChangeAddon.setText("Change Addon");
+        btnChangeAddon.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnChangeAddonActionPerformed(evt);
+            }
+        });
+
+        btnCancelItem.setText("Cancel Item");
+        btnCancelItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnCancelItemActionPerformed(evt);
+            }
+        });
+
+        btnClearAll.setText("Clear All");
+        btnClearAll.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnClearAllActionPerformed(evt);
+            }
+        });
+
+        btnChangeType.setText("Change Type");
+        btnChangeType.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnChangeTypeActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
+        jPanel5.setLayout(jPanel5Layout);
+        jPanel5Layout.setHorizontalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane5)
+                    .addGroup(jPanel5Layout.createSequentialGroup()
+                        .addComponent(btnEditQty)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnChangeAddon)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnCancelItem)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnClearAll)
+                        .addGap(55, 55, 55)
+                        .addComponent(btnChangeType)
+                        .addGap(0, 498, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        jPanel5Layout.setVerticalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addGap(27, 27, 27)
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnEditQty)
+                    .addComponent(btnChangeAddon)
+                    .addComponent(btnCancelItem)
+                    .addComponent(btnClearAll)
+                    .addComponent(btnChangeType))
+                .addGap(29, 29, 29)
+                .addComponent(jScrollPane5, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(111, Short.MAX_VALUE))
+        );
+
+        jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 520, 1030, 350));
 
         btnDashBoard.setBackground(new java.awt.Color(18, 20, 23));
         btnDashBoard.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -957,7 +1266,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnDashBoardActionPerformed(evt);
             }
         });
-        jPanel1.add(btnDashBoard, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 580, -1, -1));
+        jPanel1.add(btnDashBoard, new org.netbeans.lib.awtextra.AbsoluteConstraints(580, 10, -1, -1));
 
         btnProducts.setBackground(new java.awt.Color(18, 20, 23));
         btnProducts.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -968,7 +1277,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnProductsActionPerformed(evt);
             }
         });
-        jPanel1.add(btnProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 580, -1, -1));
+        jPanel1.add(btnProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(710, 10, -1, -1));
 
         btnCategory.setBackground(new java.awt.Color(18, 20, 23));
         btnCategory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -979,7 +1288,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnCategoryActionPerformed(evt);
             }
         });
-        jPanel1.add(btnCategory, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 580, -1, -1));
+        jPanel1.add(btnCategory, new org.netbeans.lib.awtextra.AbsoluteConstraints(820, 10, -1, -1));
 
         btnAddons.setBackground(new java.awt.Color(18, 20, 23));
         btnAddons.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -990,7 +1299,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnAddonsActionPerformed(evt);
             }
         });
-        jPanel1.add(btnAddons, new org.netbeans.lib.awtextra.AbsoluteConstraints(360, 580, -1, -1));
+        jPanel1.add(btnAddons, new org.netbeans.lib.awtextra.AbsoluteConstraints(930, 10, -1, -1));
 
         btnSize.setBackground(new java.awt.Color(18, 20, 23));
         btnSize.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1001,7 +1310,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnSizeActionPerformed(evt);
             }
         });
-        jPanel1.add(btnSize, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 630, 120, -1));
+        jPanel1.add(btnSize, new org.netbeans.lib.awtextra.AbsoluteConstraints(580, 50, -1, -1));
 
         btnHistory.setBackground(new java.awt.Color(18, 20, 23));
         btnHistory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1012,7 +1321,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnHistoryActionPerformed(evt);
             }
         });
-        jPanel1.add(btnHistory, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 630, 100, -1));
+        jPanel1.add(btnHistory, new org.netbeans.lib.awtextra.AbsoluteConstraints(660, 50, -1, -1));
 
         btnUtilities.setBackground(new java.awt.Color(18, 20, 23));
         btnUtilities.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1023,7 +1332,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnUtilitiesActionPerformed(evt);
             }
         });
-        jPanel1.add(btnUtilities, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 630, -1, -1));
+        jPanel1.add(btnUtilities, new org.netbeans.lib.awtextra.AbsoluteConstraints(760, 50, -1, -1));
 
         btnInventory.setBackground(new java.awt.Color(18, 20, 23));
         btnInventory.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1034,7 +1343,7 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnInventoryActionPerformed(evt);
             }
         });
-        jPanel1.add(btnInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 630, -1, -1));
+        jPanel1.add(btnInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(860, 50, -1, -1));
 
         btnPOS.setBackground(new java.awt.Color(18, 20, 23));
         btnPOS.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
@@ -1045,18 +1354,18 @@ public class AdminPOS extends javax.swing.JFrame {
                 btnPOSActionPerformed(evt);
             }
         });
-        jPanel1.add(btnPOS, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 680, 100, -1));
+        jPanel1.add(btnPOS, new org.netbeans.lib.awtextra.AbsoluteConstraints(580, 90, -1, -1));
 
-        btnLogOut.setBackground(new java.awt.Color(18, 20, 23));
-        btnLogOut.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
-        btnLogOut.setForeground(new java.awt.Color(197, 160, 114));
-        btnLogOut.setText("Log Out");
-        btnLogOut.addActionListener(new java.awt.event.ActionListener() {
+        btnLogOut1.setBackground(new java.awt.Color(18, 20, 23));
+        btnLogOut1.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
+        btnLogOut1.setForeground(new java.awt.Color(197, 160, 114));
+        btnLogOut1.setText("Log Out");
+        btnLogOut1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnLogOutActionPerformed(evt);
+                btnLogOut1ActionPerformed(evt);
             }
         });
-        jPanel1.add(btnLogOut, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 680, -1, -1));
+        jPanel1.add(btnLogOut1, new org.netbeans.lib.awtextra.AbsoluteConstraints(660, 90, -1, -1));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -1149,164 +1458,396 @@ public class AdminPOS extends javax.swing.JFrame {
         // TODO add your handling code here:
       int row = jTableProducts.getSelectedRow();
     if (row < 0) return;
-    
+
     int id = (Integer) jTableProducts.getValueAt(row, 0);
     String name = jTableProducts.getValueAt(row, 1).toString();
     String size = jTableProducts.getValueAt(row, 3).toString();
-    double price = ((Number) jTableProducts.getValueAt(row, 4)).doubleValue(); // ✅ FIXED
+    double price = ((Number) jTableProducts.getValueAt(row, 4)).doubleValue();
     int stock = (Integer) jTableProducts.getValueAt(row, 5);
-    
+
     if (stock <= 0) {
         JOptionPane.showMessageDialog(this, name + " ❌ OUT OF STOCK");
         return;
     }
-    
-    String addon = (String) cmbAddons.getSelectedItem();
-    double addonPrice = getAddonPrice(addon);  
-    
-    System.out.println("🧾 DEBUG - Base: ₱" + price + ", Addon: '" + addon + "' = ₱" + addonPrice);
-    
-    String qtyText = JOptionPane.showInputDialog(
-        this, 
-        "🍵 " + name + "\n📏 Size: " + size + "\n💰 Price: ₱" + String.format("%.2f", price) + // ✅ formatted
-        (addon.equals("None") ? "" : "\n➕ " + addon + ": ₱" + String.format("%.2f", addonPrice)) + 
-        "\n📦 Stock: " + stock + "\n\nEnter Quantity:"
-    );
-    
-    if (qtyText == null || qtyText.trim().isEmpty()) return;
-    
-    try {
-        int qty = Integer.parseInt(qtyText.trim());
-        if (qty <= 0 || qty > stock) {
-            JOptionPane.showMessageDialog(this, "❌ Quantity 1 to " + stock);
+
+    String orderType = cmbOrderType.getSelectedItem() != null ?
+        cmbOrderType.getSelectedItem().toString() : "Dine In";
+
+    // ✅ Table number only required for Dine In
+    String tableNo;
+    if (orderType.equals("Dine In")) {
+        tableNo = txtTableNumber.getText().trim();
+        if (tableNo.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "⚠️ Please enter a Table Number first!");
+            txtTableNumber.requestFocus();
             return;
         }
-        
-        String itemKey = "ID_" + id;
-        String displayName = name + " (" + size + ")" + (addon.equals("None") ? "" : " +" + addon);
-        double unitPrice = price + addonPrice;
-        
-        System.out.println("💰 FINAL unitPrice: ₱" + String.format("%.2f", unitPrice) + " x " + qty);
-        
-        subtotal += unitPrice * qty;
-        itemQtyMap.put(displayName, qty);
-        itemPriceMap.put(displayName, unitPrice);
-        productIdMap.put(displayName, id);
-        
-        if (!addon.equals("None")) {
-            itemAddonsMap.put(displayName, new String[]{addon});
+        if (!tableNo.matches("\\d+")) {
+            JOptionPane.showMessageDialog(this, "⚠️ Table Number must be numbers only!");
+            txtTableNumber.requestFocus();
+            return;
         }
-        
-        System.out.println("🛒 ADDED: " + displayName + " @ ₱" + unitPrice + " x " + qty);
+    } else {
+        // ✅ Take Out — no table number needed, clear it
+        tableNo = "—";
+        txtTableNumber.setText("");
+        txtTableNumber.setEnabled(false); // ✅ disable table number field
+    }
+
+    // Validate customer name — always required
+    String customerName = txtCustomerName.getText().trim();
+    if (customerName.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "⚠️ Please enter a Customer Name first!");
+        txtCustomerName.requestFocus();
+        return;
+    }
+
+    // Addon picker from DB
+    java.util.List<String> addonList = new java.util.ArrayList<>();
+    addonList.add("None");
+    try (Connection con = ConnectorXampp.connect();
+         Statement addonSt = con.createStatement();
+         ResultSet addonRs = addonSt.executeQuery("SELECT Name FROM addons ORDER BY Name")) {
+        while (addonRs.next()) addonList.add(addonRs.getString("Name"));
+    } catch (Exception e) {
+        System.out.println("Addon load error: " + e.getMessage());
+    }
+    String[] addonOptions = addonList.toArray(new String[0]);
+
+    String addon = (String) JOptionPane.showInputDialog(
+        this,
+        "➕ Select Addon for: " + name + " (" + size + ")",
+        "Select Addon",
+        JOptionPane.QUESTION_MESSAGE,
+        null,
+        addonOptions,
+        "None"
+    );
+    if (addon == null) addon = "None";
+
+    double addonPrice = getAddonPrice(addon);
+
+    String qtyText = JOptionPane.showInputDialog(
+        this,
+        "🍵 " + name + "\n📏 Size: " + size +
+        "\n💰 Price: ₱" + String.format("%.2f", price) +
+        (addon.equals("None") ? "" : "\n➕ " + addon + ": ₱" + String.format("%.2f", addonPrice)) +
+        "\n📦 Stock: " + stock +
+        (orderType.equals("Dine In") ? "\n🪑 Table #: " + tableNo : "") +
+        "\n👤 Customer: " + customerName +
+        "\n🛎️ Type: " + orderType +
+        "\n\nEnter Quantity:"
+    );
+
+    if (qtyText == null || qtyText.trim().isEmpty()) return;
+
+    try {
+        int qty = Integer.parseInt(qtyText.trim());
+        if (qty <= 0) {
+            JOptionPane.showMessageDialog(this, "❌ Quantity must be at least 1.");
+            return;
+        }
+        if (qty > stock) {
+            JOptionPane.showMessageDialog(this,
+                "❌ Not enough stock!\n" +
+                "Available: " + stock + "\n" +
+                "You entered: " + qty);
+            return;
+        }
+
+        double unitPrice = price + addonPrice;
+        double rowSubtotal = unitPrice * qty;
+
+        orderModel.addRow(new Object[]{
+            name + " (" + size + ")",
+            size,
+            addon,
+            qty,
+            unitPrice,
+            rowSubtotal,
+            tableNo,
+            customerName,
+            orderType
+        });
+
+        subtotal += rowSubtotal;
+
+        String displayKey = name + "_" + size + "_" + addon + "_" + System.currentTimeMillis();
+        itemQtyMap.put(displayKey, qty);
+        itemPriceMap.put(displayKey, unitPrice);
+        productIdMap.put(displayKey, id);
+        if (!addon.equals("None")) {
+            itemAddonsMap.put(displayKey, new String[]{addon});
+        }
+
         updateReceiptDisplay();
-        cmbAddons.setSelectedIndex(0);
-        
+
     } catch (NumberFormatException e) {
         JOptionPane.showMessageDialog(this, "❌ Enter number only!");
     }
     }//GEN-LAST:event_jTableProductsMouseClicked
 
-    private void btnAddAddonsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddAddonsActionPerformed
+    private void btnLogOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogOutActionPerformed
         // TODO add your handling code here:
-      int row = jTableProducts.getSelectedRow();
-    if (row < 0) {
-        JOptionPane.showMessageDialog(this, "👆 Select a product first!");
-        return;
-    }
-    
-    int id = (Integer) jTableProducts.getValueAt(row, 0);
-    String name = jTableProducts.getValueAt(row, 1).toString();
-    String size = jTableProducts.getValueAt(row, 3).toString();
-    String baseItemKey = "ID_" + id;
-    
-    String addon = (String) cmbAddons.getSelectedItem();
-    if (addon.equals("None")) {
-        JOptionPane.showMessageDialog(this, "➕ Select an addon first!");
-        return;
-    }
-    
-    // Find product already in cart
-    String displayName = name + " (" + size + ")";
-    String currentAddonsStr = "";
-    
-    // Check if product exists in cart
-    for (String cartItem : itemQtyMap.keySet()) {
-        if (cartItem.contains(baseItemKey.replace("ID_", ""))) {
-            displayName = cartItem;
-            String[] existingAddons = itemAddonsMap.get(cartItem);
-            if (existingAddons != null) {
-                currentAddonsStr = String.join(" + ", existingAddons);
-            }
-            break;
-        }
-    }
-    
+        Login h = new Login();
+        h.setVisible(true);
+        this.dispose();
+    }//GEN-LAST:event_btnLogOutActionPerformed
 
-    String newAddonStr = currentAddonsStr.isEmpty() ? addon : currentAddonsStr + " + " + addon;
-    String finalDisplayName = displayName + " +" + newAddonStr;
-    
-   
-    double basePrice = getBasePrice(id);
-    double totalAddonPrice = getAddonPrice(addon);  
-    
-  
-    String[] existingAddons = itemAddonsMap.get(displayName);
-    if (existingAddons != null) {
-        for (String exAddon : existingAddons) {
-            totalAddonPrice += getAddonPrice(exAddon);
-        }
+    private void btnCancelItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelItemActionPerformed
+        // TODO add your handling code here:
+          int selectedRow = jTableOrder.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "⚠️ Select an item to cancel.");
+        return;
     }
-    
-    double newUnitPrice = basePrice + totalAddonPrice;
-    
-    int confirm = JOptionPane.showConfirmDialog(
-        this, 
-        "☕ " + displayName + "\n" +
-        "➕ Current: " + currentAddonsStr + "\n" +
-        "➕ Add: " + addon + "\n\n" +
-        "💰 New Price: ₱" + String.format("%.2f", newUnitPrice) + "\n\n" +
-        "Confirm?",
-        "Add Addon", 
-        JOptionPane.YES_NO_OPTION
-    );
-    
+
+    String productName = orderModel.getValueAt(selectedRow, 0).toString();
+    int qty = (int) orderModel.getValueAt(selectedRow, 3);
+    double unitPrice = ((Number) orderModel.getValueAt(selectedRow, 4)).doubleValue();
+
+    int confirm = JOptionPane.showConfirmDialog(this,
+        "❌ Remove '" + productName + "' from order?",
+        "Cancel Item", JOptionPane.YES_NO_OPTION);
+
     if (confirm == JOptionPane.YES_OPTION) {
-      
-        String[] addonsArray;
-        if (existingAddons != null) {
-            addonsArray = new String[existingAddons.length + 1];
-            System.arraycopy(existingAddons, 0, addonsArray, 0, existingAddons.length);
-            addonsArray[existingAddons.length] = addon;
+        subtotal -= unitPrice * qty;
+        if (subtotal < 0) subtotal = 0;
+
+        orderModel.removeRow(selectedRow);
+
+        // ✅ If table is now empty — reset everything
+        if (orderModel.getRowCount() == 0) {
+            subtotal = 0;
+            total = 0;
+            cashInput = "";
+            receiptItems = "";
+            itemQtyMap.clear();
+            itemPriceMap.clear();
+            productIdMap.clear();
+            itemAddonsMap.clear();
+            txtTableNumber.setText("");
+            txtCustomerName.setText("");
+            showWelcomeDisplay(); // ✅ reset receipt to welcome screen
         } else {
-            addonsArray = new String[]{addon};
+            updateReceiptDisplay();
         }
-        
-       
-        if (itemQtyMap.containsKey(displayName)) {
-            int qty = itemQtyMap.get(displayName);
-            double oldPrice = itemPriceMap.get(displayName);
-            
-           
-            subtotal += (newUnitPrice - oldPrice) * qty;
-            
-            itemQtyMap.remove(displayName);
-            itemPriceMap.remove(displayName);
-            itemAddonsMap.remove(displayName);
-            
-            itemQtyMap.put(finalDisplayName, qty);
-            itemPriceMap.put(finalDisplayName, newUnitPrice);  
-            itemAddonsMap.put(finalDisplayName, addonsArray);
-        }
-        
-       
-        if (productIdMap.containsKey(baseItemKey)) {
-            productIdMap.put(finalDisplayName, productIdMap.get(baseItemKey));
-        }
-        
-        updateReceiptDisplay();  
-        cmbAddons.setSelectedIndex(0);
     }
-    }//GEN-LAST:event_btnAddAddonsActionPerformed
+    }//GEN-LAST:event_btnCancelItemActionPerformed
+
+    private void btnEditQtyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditQtyActionPerformed
+        // TODO add your handling code here:
+     int selectedRow = jTableOrder.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "⚠️ Select an item to edit.");
+        return;
+    }
+
+    String productName = orderModel.getValueAt(selectedRow, 0).toString();
+    String addon = orderModel.getValueAt(selectedRow, 2).toString();
+    int currentQty = (int) orderModel.getValueAt(selectedRow, 3);
+    double unitPrice = ((Number) orderModel.getValueAt(selectedRow, 4)).doubleValue();
+
+    // ✅ Get actual stock
+    String baseName = productName.contains("(") ?
+        productName.substring(0, productName.lastIndexOf("(")).trim() : productName;
+    String size = orderModel.getValueAt(selectedRow, 1).toString();
+    int availableStock = getAvailableStock(baseName, size);
+
+    String newQtyText = JOptionPane.showInputDialog(this,
+        "✏️ Edit quantity for: " + productName +
+        "\nAddon: " + addon +
+        "\nCurrent Qty: " + currentQty +
+        "\n📦 Available Stock: " + availableStock +
+        "\n\nNew Quantity:", currentQty);
+
+    if (newQtyText == null || newQtyText.trim().isEmpty()) return;
+
+    try {
+        int newQty = Integer.parseInt(newQtyText.trim());
+        if (newQty <= 0) {
+            JOptionPane.showMessageDialog(this, "❌ Quantity must be at least 1.");
+            return;
+        }
+        // ✅ Validate against stock
+        if (newQty > availableStock) {
+            JOptionPane.showMessageDialog(this,
+                "❌ Not enough stock!\n" +
+                "Available: " + availableStock + "\n" +
+                "You entered: " + newQty);
+            return;
+        }
+
+        subtotal -= unitPrice * currentQty;
+        subtotal += unitPrice * newQty;
+        if (subtotal < 0) subtotal = 0;
+
+        orderModel.setValueAt(newQty, selectedRow, 3);
+        orderModel.setValueAt(unitPrice * newQty, selectedRow, 5);
+
+        updateReceiptDisplay();
+
+    } catch (NumberFormatException e) {
+        JOptionPane.showMessageDialog(this, "❌ Enter a valid number!");
+    }
+    }//GEN-LAST:event_btnEditQtyActionPerformed
+
+    private void btnChangeAddonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnChangeAddonActionPerformed
+        // TODO add your handling code here:
+     int selectedRow = jTableOrder.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "⚠️ Select an item to change addon.");
+        return;
+    }
+
+    String productName = orderModel.getValueAt(selectedRow, 0).toString();
+    String currentAddon = orderModel.getValueAt(selectedRow, 2).toString();
+    int qty = (int) orderModel.getValueAt(selectedRow, 3);
+    double currentUnitPrice = ((Number) orderModel.getValueAt(selectedRow, 4)).doubleValue();
+
+    // Load addons from DB
+    java.util.List<String> addonList = new java.util.ArrayList<>();
+    addonList.add("None");
+    try (Connection con = ConnectorXampp.connect();
+         Statement addonSt = con.createStatement();
+         ResultSet addonRs = addonSt.executeQuery("SELECT Name FROM addons ORDER BY Name")) {
+        while (addonRs.next()) addonList.add(addonRs.getString("Name"));
+    } catch (Exception e) {
+        System.out.println("Addon load error: " + e.getMessage());
+    }
+    String[] addonOptions = addonList.toArray(new String[0]);
+
+    String newAddon = (String) JOptionPane.showInputDialog(
+        this,
+        "🔄 Change addon for: " + productName +
+        "\nCurrent Addon: " + currentAddon +
+        "\n\nSelect new addon:",
+        "Change Addon",
+        JOptionPane.QUESTION_MESSAGE,
+        null,
+        addonOptions,
+        currentAddon
+    );
+
+    if (newAddon == null || newAddon.equals(currentAddon)) return;
+
+    double oldAddonPrice = getAddonPrice(currentAddon);
+    double newAddonPrice = getAddonPrice(newAddon);
+    double basePrice = currentUnitPrice - oldAddonPrice;
+    double newUnitPrice = basePrice + newAddonPrice;
+    double newSubtotal = newUnitPrice * qty;
+
+    subtotal -= currentUnitPrice * qty;
+    subtotal += newSubtotal;
+    if (subtotal < 0) subtotal = 0;
+
+    orderModel.setValueAt(newAddon, selectedRow, 2);
+    orderModel.setValueAt(newUnitPrice, selectedRow, 4);
+    orderModel.setValueAt(newSubtotal, selectedRow, 5);
+
+    updateReceiptDisplay();
+    JOptionPane.showMessageDialog(this, "✅ Addon changed to: " + newAddon);
+    }//GEN-LAST:event_btnChangeAddonActionPerformed
+
+    private void btnClearAllActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearAllActionPerformed
+        // TODO add your handling code here:
+    if (orderModel.getRowCount() == 0) {
+        JOptionPane.showMessageDialog(this, "⚠️ No items in order.");
+        return;
+    }
+
+    int confirm = JOptionPane.showConfirmDialog(this,
+        "🗑️ Clear ALL items from order?",
+        "Clear Order", JOptionPane.YES_NO_OPTION);
+
+    if (confirm == JOptionPane.YES_OPTION) {
+        orderModel.setRowCount(0);
+        subtotal = 0;
+        total = 0;
+        cashInput = "";
+        receiptItems = "";
+        itemQtyMap.clear();
+        itemPriceMap.clear();
+        productIdMap.clear();
+        itemAddonsMap.clear();
+        txtTableNumber.setText("");
+        txtTableNumber.setEnabled(true);
+        txtCustomerName.setText("");
+
+        // ✅ Prevent action listener from firing
+        isSettingUpCombos = true;
+        cmbOrderType.setSelectedIndex(0);
+        isSettingUpCombos = false;
+
+        showWelcomeDisplay();
+    }
+    }//GEN-LAST:event_btnClearAllActionPerformed
+
+    private void btnChangeTypeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnChangeTypeActionPerformed
+        // TODO add your handling code here:
+       int selectedRow = jTableOrder.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "⚠️ Select an item to change order type.");
+        return;
+    }
+
+    String productName = orderModel.getValueAt(selectedRow, 0).toString();
+    String currentType = orderModel.getValueAt(selectedRow, 8).toString();
+
+    String[] typeOptions = {"Dine In", "Take Out"};
+
+    String newType = (String) JOptionPane.showInputDialog(
+        this,
+        "🛎️ Change order type for: " + productName +
+        "\nCurrent Type: " + currentType +
+        "\n\nSelect new type:",
+        "Change Order Type",
+        JOptionPane.QUESTION_MESSAGE,
+        null,
+        typeOptions,
+        currentType
+    );
+
+    if (newType == null || newType.equals(currentType)) return;
+
+    if (newType.equals("Take Out")) {
+        // ✅ Take Out — clear and disable table number
+        orderModel.setValueAt("—", selectedRow, 6);
+        txtTableNumber.setText("");
+        txtTableNumber.setEnabled(false);
+
+    } else {
+        // ✅ Dine In — ask for table number
+        txtTableNumber.setEnabled(true);
+
+        String tableNo = JOptionPane.showInputDialog(this,
+            "🪑 Enter Table Number for Dine In:",
+            "Table Number",
+            JOptionPane.QUESTION_MESSAGE);
+
+        if (tableNo == null || tableNo.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "⚠️ Table Number is required for Dine In!");
+            return;
+        }
+        if (!tableNo.trim().matches("\\d+")) {
+            JOptionPane.showMessageDialog(this, "⚠️ Table Number must be numbers only!");
+            return;
+        }
+
+        txtTableNumber.setText(tableNo.trim());
+        orderModel.setValueAt(tableNo.trim(), selectedRow, 6);
+    }
+
+    orderModel.setValueAt(newType, selectedRow, 8);
+
+    // ✅ Update combobox without triggering listener
+    isSettingUpCombos = true;
+    cmbOrderType.setSelectedItem(newType);
+    isSettingUpCombos = false;
+
+    updateReceiptDisplay();
+    JOptionPane.showMessageDialog(this, "✅ Order type changed to: " + newType);
+    }//GEN-LAST:event_btnChangeTypeActionPerformed
 
     private void btnDashBoardActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDashBoardActionPerformed
         // TODO add your handling code here:
@@ -1371,12 +1912,12 @@ public class AdminPOS extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_btnPOSActionPerformed
 
-    private void btnLogOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogOutActionPerformed
+    private void btnLogOut1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogOut1ActionPerformed
         // TODO add your handling code here:
         Login h = new Login();
         h.setVisible(true);
         this.dispose();
-    }//GEN-LAST:event_btnLogOutActionPerformed
+    }//GEN-LAST:event_btnLogOut1ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -1426,33 +1967,45 @@ public class AdminPOS extends javax.swing.JFrame {
     private javax.swing.JButton btn8;
     private javax.swing.JButton btn9;
     private javax.swing.JButton btnAC;
-    private javax.swing.JButton btnAddAddons;
     private javax.swing.JButton btnAddons;
+    private javax.swing.JButton btnCancelItem;
     private javax.swing.JButton btnCategory;
+    private javax.swing.JButton btnChangeAddon;
+    private javax.swing.JButton btnChangeType;
+    private javax.swing.JButton btnClearAll;
     private javax.swing.JButton btnDashBoard;
+    private javax.swing.JButton btnEditQty;
     private javax.swing.JButton btnErase;
     private javax.swing.JButton btnHistory;
     private javax.swing.JButton btnInventory;
     private javax.swing.JButton btnLogOut;
+    private javax.swing.JButton btnLogOut1;
     private javax.swing.JButton btnPAY;
     private javax.swing.JButton btnPOS;
     private javax.swing.JButton btnProducts;
     private javax.swing.JButton btnSize;
     private javax.swing.JButton btnUtilities;
-    private javax.swing.JComboBox<String> cmbAddons;
     private javax.swing.JComboBox<String> cmbOrderType;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
+    private javax.swing.JPanel jPanel5;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JScrollPane jScrollPane5;
     private javax.swing.JTable jTableAddons;
     private javax.swing.JTable jTableCart;
+    private javax.swing.JTable jTableOrder;
     private javax.swing.JTable jTableProducts;
+    private javax.swing.JTextField txtCustomerName;
     private javax.swing.JTextArea txtDisplayPOS;
     private javax.swing.JTextField txtSearch;
+    private javax.swing.JTextField txtTableNumber;
     // End of variables declaration//GEN-END:variables
 }
