@@ -759,6 +759,40 @@ public class POS extends javax.swing.JFrame {
     }
     return 0;
 }
+    
+    private int getCurrentOrderedQty(String name, String size) {
+    int totalQty = 0;
+
+    for (int i = 0; i < orderModel.getRowCount(); i++) {
+        String productName = orderModel.getValueAt(i, 0).toString();
+        String rowSize = orderModel.getValueAt(i, 1).toString();
+        int qty = (int) orderModel.getValueAt(i, 3);
+
+        if (productName.contains(name) && rowSize.equals(size)) {
+            totalQty += qty;
+        }
+    }
+
+    return totalQty;
+}
+    
+    private int getCurrentOrderedQtyExcludingRow(String name, String size, int excludeRow) {
+    int totalQty = 0;
+
+    for (int i = 0; i < orderModel.getRowCount(); i++) {
+        if (i == excludeRow) continue; // ✅ skip the row being edited
+
+        String productName = orderModel.getValueAt(i, 0).toString();
+        String rowSize = orderModel.getValueAt(i, 1).toString();
+        int qty = (int) orderModel.getValueAt(i, 3);
+
+        if (productName.contains(name) && rowSize.equals(size)) {
+            totalQty += qty;
+        }
+    }
+
+    return totalQty;
+}
    
    
    
@@ -1436,11 +1470,15 @@ public class POS extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "❌ Quantity must be at least 1.");
             return;
         }
-        if (qty > stock) {
+        int currentOrdered = getCurrentOrderedQty(name, size);
+
+        if (currentOrdered + qty > stock) {
             JOptionPane.showMessageDialog(this,
-                "❌ Not enough stock!\n" +
-                "Available: " + stock + "\n" +
-                "You entered: " + qty);
+            "❌ Not enough stock!\n" +
+            "Available: " + stock + "\n" +
+            "Already in order: " + currentOrdered + "\n" +
+            "You are adding: " + qty + "\n" +
+            "Remaining allowed: " + (stock - currentOrdered));
             return;
         }
 
@@ -1566,13 +1604,17 @@ public class POS extends javax.swing.JFrame {
             return;
         }
         // ✅ Validate against stock
-        if (newQty > availableStock) {
-            JOptionPane.showMessageDialog(this,
-                "❌ Not enough stock!\n" +
-                "Available: " + availableStock + "\n" +
-                "You entered: " + newQty);
-            return;
-        }
+        int currentOrdered = getCurrentOrderedQtyExcludingRow(baseName, size, selectedRow);
+
+        if (currentOrdered + newQty > availableStock) {
+        JOptionPane.showMessageDialog(this,
+        "❌ Not enough stock!\n" +
+        "Available: " + availableStock + "\n" +
+        "Other orders: " + currentOrdered + "\n" +
+        "You want: " + newQty + "\n" +
+        "Remaining allowed: " + (availableStock - currentOrdered));
+        return;
+    }
 
         subtotal -= unitPrice * currentQty;
         subtotal += unitPrice * newQty;

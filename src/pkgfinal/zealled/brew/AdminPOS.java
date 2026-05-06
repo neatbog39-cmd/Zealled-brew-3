@@ -673,7 +673,7 @@ public class AdminPOS extends javax.swing.JFrame {
     return -1;
 } 
     
-    // ========================= RESET =========================
+      // ========================= RESET =========================
     private void resetPOS() {
     subtotal = total = 0;
     cashInput = receiptItems = "";
@@ -759,6 +759,43 @@ public class AdminPOS extends javax.swing.JFrame {
     }
     return 0;
 }
+    
+    private int getCurrentOrderedQty(String name, String size) {
+    int totalQty = 0;
+
+    for (int i = 0; i < orderModel.getRowCount(); i++) {
+        String productName = orderModel.getValueAt(i, 0).toString();
+        String rowSize = orderModel.getValueAt(i, 1).toString();
+        int qty = (int) orderModel.getValueAt(i, 3);
+
+        if (productName.contains(name) && rowSize.equals(size)) {
+            totalQty += qty;
+        }
+    }
+
+    return totalQty;
+}
+    
+    private int getCurrentOrderedQtyExcludingRow(String name, String size, int excludeRow) {
+    int totalQty = 0;
+
+    for (int i = 0; i < orderModel.getRowCount(); i++) {
+        if (i == excludeRow) continue; // ✅ skip the row being edited
+
+        String productName = orderModel.getValueAt(i, 0).toString();
+        String rowSize = orderModel.getValueAt(i, 1).toString();
+        int qty = (int) orderModel.getValueAt(i, 3);
+
+        if (productName.contains(name) && rowSize.equals(size)) {
+            totalQty += qty;
+        }
+    }
+
+    return totalQty;
+}
+   
+   
+   
    
    
    
@@ -794,7 +831,6 @@ public class AdminPOS extends javax.swing.JFrame {
         btn8 = new javax.swing.JButton();
         btn9 = new javax.swing.JButton();
         btnAC = new javax.swing.JButton();
-        btnLogOut = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         jTableProducts = new javax.swing.JTable();
@@ -970,16 +1006,6 @@ public class AdminPOS extends javax.swing.JFrame {
             }
         });
 
-        btnLogOut.setBackground(new java.awt.Color(40, 40, 40));
-        btnLogOut.setFont(new java.awt.Font("Serif", 1, 18)); // NOI18N
-        btnLogOut.setForeground(new java.awt.Color(197, 160, 114));
-        btnLogOut.setText("Log Out");
-        btnLogOut.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnLogOutActionPerformed(evt);
-            }
-        });
-
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -1012,10 +1038,9 @@ public class AdminPOS extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnErase, javax.swing.GroupLayout.PREFERRED_SIZE, 86, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(btnPAY, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(btnLogOut, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(48, 48, 48))
+                        .addGap(65, 65, 65)
+                        .addComponent(btnPAY, javax.swing.GroupLayout.PREFERRED_SIZE, 146, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(76, 76, 76))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1041,9 +1066,7 @@ public class AdminPOS extends javax.swing.JFrame {
                     .addComponent(btn0, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(btnErase, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(btnPAY, javax.swing.GroupLayout.DEFAULT_SIZE, 52, Short.MAX_VALUE)
-                    .addComponent(btnLogOut, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(btnPAY, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(116, 116, 116))
         );
 
@@ -1133,16 +1156,15 @@ public class AdminPOS extends javax.swing.JFrame {
                         .addComponent(txtCustomerName, javax.swing.GroupLayout.PREFERRED_SIZE, 104, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(cmbOrderType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(jPanel4Layout.createSequentialGroup()
-                            .addGap(15, 15, 15)
-                            .addComponent(jLabel1)
-                            .addGap(18, 18, 18)
-                            .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGroup(jPanel4Layout.createSequentialGroup()
-                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addGap(15, 15, 15)
+                        .addComponent(jLabel1)
+                        .addGap(18, 18, 18)
+                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(249, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
@@ -1547,11 +1569,15 @@ public class AdminPOS extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "❌ Quantity must be at least 1.");
             return;
         }
-        if (qty > stock) {
+        int currentOrdered = getCurrentOrderedQty(name, size);
+
+        if (currentOrdered + qty > stock) {
             JOptionPane.showMessageDialog(this,
-                "❌ Not enough stock!\n" +
-                "Available: " + stock + "\n" +
-                "You entered: " + qty);
+            "❌ Not enough stock!\n" +
+            "Available: " + stock + "\n" +
+            "Already in order: " + currentOrdered + "\n" +
+            "You are adding: " + qty + "\n" +
+            "Remaining allowed: " + (stock - currentOrdered));
             return;
         }
 
@@ -1586,13 +1612,6 @@ public class AdminPOS extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(this, "❌ Enter number only!");
     }
     }//GEN-LAST:event_jTableProductsMouseClicked
-
-    private void btnLogOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLogOutActionPerformed
-        // TODO add your handling code here:
-        Login h = new Login();
-        h.setVisible(true);
-        this.dispose();
-    }//GEN-LAST:event_btnLogOutActionPerformed
 
     private void btnCancelItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelItemActionPerformed
         // TODO add your handling code here:
@@ -1637,7 +1656,7 @@ public class AdminPOS extends javax.swing.JFrame {
 
     private void btnEditQtyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditQtyActionPerformed
         // TODO add your handling code here:
-     int selectedRow = jTableOrder.getSelectedRow();
+    int selectedRow = jTableOrder.getSelectedRow();
     if (selectedRow == -1) {
         JOptionPane.showMessageDialog(this, "⚠️ Select an item to edit.");
         return;
@@ -1670,13 +1689,17 @@ public class AdminPOS extends javax.swing.JFrame {
             return;
         }
         // ✅ Validate against stock
-        if (newQty > availableStock) {
-            JOptionPane.showMessageDialog(this,
-                "❌ Not enough stock!\n" +
-                "Available: " + availableStock + "\n" +
-                "You entered: " + newQty);
-            return;
-        }
+        int currentOrdered = getCurrentOrderedQtyExcludingRow(baseName, size, selectedRow);
+
+        if (currentOrdered + newQty > availableStock) {
+        JOptionPane.showMessageDialog(this,
+        "❌ Not enough stock!\n" +
+        "Available: " + availableStock + "\n" +
+        "Other orders: " + currentOrdered + "\n" +
+        "You want: " + newQty + "\n" +
+        "Remaining allowed: " + (availableStock - currentOrdered));
+        return;
+    }
 
         subtotal -= unitPrice * currentQty;
         subtotal += unitPrice * newQty;
@@ -1978,7 +2001,6 @@ public class AdminPOS extends javax.swing.JFrame {
     private javax.swing.JButton btnErase;
     private javax.swing.JButton btnHistory;
     private javax.swing.JButton btnInventory;
-    private javax.swing.JButton btnLogOut;
     private javax.swing.JButton btnLogOut1;
     private javax.swing.JButton btnPAY;
     private javax.swing.JButton btnPOS;
